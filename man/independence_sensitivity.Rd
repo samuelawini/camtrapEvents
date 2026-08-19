@@ -16,11 +16,16 @@ independence_sensitivity(
   compare_to = c("last_record", "last_independent"),
   format = "\%Y-\%m-\%d \%H:\%M:\%S",
   tz = "UTC",
-  by_species = TRUE
+  by_species = TRUE,
+  record_id = NULL,
+  min_increase = 1,
+  metadata_refractory = 0
 )
 }
 \arguments{
-\item{data}{A data frame of camera-trap records, one row per detection.}
+\item{data}{A data frame of camera-trap records, one row per unique
+photograph-species detection. Multiple annotation rows for the same
+photograph and species must be consolidated before filtering.}
 
 \item{datetime}{Name of the date-time column. Either \code{POSIXct}, or
 character parsed with \code{format}.}
@@ -40,7 +45,7 @@ by \code{rule}. Ignored when \code{rule = "time_only"}.}
 
 \item{count}{Optional name of a total group-size column, used by
 \code{"running_max"} in addition to \code{metadata}, and used to compute
-\code{n_new}. If absent, group size falls back to the sum of numeric
+\code{count_increment}. If absent, group size falls back to the sum of numeric
 \code{metadata}.}
 
 \item{compare_to}{Reference point for the time gap:
@@ -58,6 +63,24 @@ Equivalent to \pkg{camtrapR}'s \code{deltaTimeComparedTo}.}
 \item{tz}{Time zone used for parsing. Defaults to \code{"UTC"}.}
 
 \item{by_species}{If \code{TRUE}, also return counts per species.}
+
+\item{record_id}{Optional name of a column uniquely identifying a photograph
+or trigger. When supplied, duplicate identifiers within a station-species
+group cause an error. This catches split annotation rows that would
+otherwise be mistaken for separate detections.}
+
+\item{min_increase}{How far a count must exceed the running maximum before it
+is treated as evidence for a new event under \code{"running_max"}. The
+default of 1 accepts any increase. Raise it where tagging is noisy: a rise
+from 3 to 4 animals is exactly what a miscount looks like, whereas a rise
+from 3 to 7 is not. Ignored by the other rules.}
+
+\item{metadata_refractory}{Optional short settling window in minutes. Within
+this period after the last retained event, metadata may update the running
+maxima but cannot itself open another event. A gap beyond \code{threshold}
+still opens an event. The default, 0, preserves the single-threshold
+behaviour. Positive values provide the two-time-scale filter discussed in
+the package vignette and must not exceed \code{threshold}.}
 }
 \value{
 A list with:
@@ -77,9 +100,10 @@ turns an arbitrary decision into a stated sensitivity analysis.
 }
 \details{
 The per-species output is the more diagnostic of the two. If the extra events
-produced by a metadata rule are concentrated in gregarious species, the rule
-is introducing a bias that correlates with sociality, which will propagate
-into any comparative index such as RAI.
+produced by a metadata rule are concentrated in gregarious species, a
+comparative index such as RAI is especially sensitive to the rule chosen.
+The direction of the difference alone does not establish which rule is more
+accurate.
 }
 \examples{
 set.seed(1)

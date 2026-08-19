@@ -5,36 +5,17 @@
 
 **Metadata-aware independence filtering for camera-trap data**
 
-Camera traps fire repeatedly on the same animal, so raw records are not
-statistically independent. Almost every published study handles this with a
-fixed time threshold: a record starts a new detection event only if it falls
-more than *k* minutes after the previous one at the same station for the same
-species. This is what `camtrapR::recordTable(minDeltaTime = ...)`, Camelot,
-Camera Base and Wild.ID all implement.
+Camera traps often produce many photographs of the same animal or group.
+Analysts usually collapse these records with a fixed time threshold: another
+record of the same species at the same station starts a new event only after
+*k* minutes without a detection.
 
-A time threshold alone cannot tell the difference between **one animal that
-lingers** and **new individuals arriving**. Baboons and warthogs may hold
-station at a waterhole for an hour; a duiker crosses the frame in four seconds.
-The same threshold means something different for each, and no single value fixes
-that, because the problem is not the value but the fact that time is the only
-information being used.
-
-`camtrapEvents` lets the independence decision also use the metadata you already
-recorded when tagging images: group size, age and sex counts, behaviour, or
-individual ID.
-
-```r
-independent_events(
-  records,
-  datetime  = "Photo.Date.Time",
-  station   = "Sampling.Unit.Name",
-  species   = "species",
-  threshold = 30,
-  rule      = "running_max",
-  metadata  = c("Adult.Male", "Adult.Female", "Juvenile", "Unknown.Adult"),
-  count     = "Number.of.Animals"
-)
-```
+Time alone cannot resolve every case. A second group can arrive inside the
+threshold, while one group can remain visible beyond it. `camtrapEvents` makes
+the decision explicit and reproducible by allowing observed group size, age and
+sex composition, behaviour, or identity labels to supplement time. These data
+provide evidence, not automatic ground truth, so the package also reports
+sensitivity to the rule and threshold chosen.
 
 ## Installation
 
@@ -43,142 +24,186 @@ independent_events(
 remotes::install_github("awsamu/camtrapEvents")
 ```
 
+## Input contract
+
+The input must contain one row per unique photograph-species detection.
+Multiple annotation rows for the same photograph and species must first be
+combined into one record. If a photo identifier is available, pass it through
+`record_id`; the function will stop if duplicate photograph-species rows remain.
+
+```r
+events <- independent_events(
+  records,
+  datetime  = "Photo.Date.Time",
+  station   = "Sampling.Unit.Name",
+  species   = "species",
+  record_id = "Photo.ID",
+  threshold = 30,
+  rule      = "running_max",
+  metadata  = c("Adult.Male", "Adult.Female", "Juvenile", "Unknown.Adult"),
+  count     = "Number.of.Animals"
+)
+```
+
+Date-times are sorted within station and species, and the original row order is
+restored in the output.
+
 ## The three rules
 
-| Rule | A record inside the time window starts a new event when... | Metadata type |
+| Rule | A record inside the time-defined burst starts a new event when... | Metadata type |
 |---|---|---|
 | `time_only` | never | none |
-| `any_change` | any metadata column differs from the previous record | numeric or categorical |
-| `running_max` | a numeric column exceeds the running maximum for the current burst | numeric only |
+| `running_max` | a numeric field exceeds its maximum already observed in the burst | numeric |
+| `any_change` | any field differs from the preceding record | numeric or categorical |
 
-`time_only` reproduces the conventional filter, and is the right choice when
-metadata is absent or unreliable.
+`time_only` is the safe default when metadata are absent or unreliable.
 
-`any_change` is the most permissive. It is the rule used in Awini et al. (2026).
-Because it responds to decreases as well as increases, and to a return to a
-composition already seen, it can count observer miscounting as biology. In the
-Mole National Park data it inflates event totals by 19% overall at a 60-minute
-threshold, but that inflation is not evenly spread: it is 31% for *Kobus kob*
-and 0% for 15 of 28 species. Any inflation that tracks group size becomes a bias
-correlated with sociality in downstream indices such as RAI.
+`running_max` is the more conservative metadata rule. A fall from five visible
+animals to three, or a later return to five, does not open another event. A rise
+above five can. This limits repeated splitting as animals move in and out of the
+frame, but it can still over-split one encounter when visibility improves.
 
-`running_max` is the recommended rule where age and sex counts are available. A
-record opens a new event only if some count rises **above everything already
-seen in that burst**, which is evidence of individuals not previously counted. A
-count that falls, or returns to a value already seen, is not. This roughly
-halves the inflation and removes its dependence on oscillating counts.
+`any_change` is deliberately permissive. It can be useful with reliable
+individual IDs or other categorical evidence, but ordinary changes in visible
+composition can make it over-count encounters. It should not be interpreted as
+truth merely because it retains more records.
 
-## Reporting sensitivity
+### Optional two-time-scale filter
 
-The filter is a researcher degree of freedom, and it is rarely justified from
-data. `independence_sensitivity()` runs the grid so you can report the choice
-rather than assert it:
+`metadata_refractory` adds a short settling window inside the main threshold.
+During that window, records still update the running maxima, but metadata cannot
+open another event. For example:
+
+```r
+events <- independent_events(
+  records,
+  datetime = "datetime", station = "station", species = "species",
+  threshold = 30,
+  rule = "running_max",
+  metadata = c("males", "females", "juveniles"),
+  count = "group_size",
+  metadata_refractory = 2
+)
+```
+
+Here, the outer 30-minute threshold defines time bursts and the inner 2-minute
+window prevents rapid count fluctuations from repeatedly opening events. A
+positive value is an additional ecological assumption and should be justified
+and included in sensitivity analysis. The default is `0`, which preserves the
+single-threshold behaviour.
+
+## Events are not individuals
+
+The output distinguishes event classification from observed group size:
+
+- `independent` identifies retained event records.
+- `event_id` assigns every photograph to an event within station and species.
+- `burst_id` identifies the outer time-defined burst.
+- `count_increment` allocates increases in the maximum observed group size
+  across events in a burst.
+- `n_new` is a compatibility alias for `count_increment` and is deprecated.
+
+`count_increment` prevents a split burst from duplicating the same observed
+maximum, but it is not an identity estimate. Animals can leave, re-enter, remain
+hidden, or be replaced by similar-looking individuals. Claims about distinct
+individuals require independent identity evidence such as unique markings,
+tags, or genetic identification.
+
+## Report sensitivity
+
+`independence_sensitivity()` evaluates the threshold-by-rule grid:
 
 ```r
 s <- independence_sensitivity(
   records,
-  datetime = "Photo.Date.Time", station = "Sampling.Unit.Name",
+  datetime = "Photo.Date.Time",
+  station  = "Sampling.Unit.Name",
   species  = "species",
-  thresholds = c(0, 15, 30, 60, 120),
-  metadata = c("Adult.Male", "Adult.Female", "Juvenile", "Unknown.Adult")
+  record_id = "Photo.ID",
+  thresholds = c(15, 30, 60, 120),
+  metadata = c("Adult.Male", "Adult.Female", "Juvenile", "Unknown.Adult"),
+  count = "Number.of.Animals"
 )
 
-s$overall     # event totals per rule x threshold
-s$by_species  # the same, per species
-s$inflation   # % increase of each rule over time_only, per species
+s$overall
+s$by_species
+s$inflation
 ```
 
-`s$inflation` is the diagnostic that matters. If the extra events concentrate in
-your gregarious species, say so in the paper.
+The `inflation` table is a relative-change diagnostic, not proof that the
+additional events are correct. Large, species-specific differences show where
+the analytical result depends strongly on the metadata rule and therefore where
+manual validation or cautious interpretation is most important.
+
+## Example data
+
+The package includes `waterhole`, a simulated dataset with a constructed
+`true_group` label for demonstrating the functions:
+
+```r
+data(waterhole)
+truth <- length(unique(waterhole$true_group))
+
+vapply(c("time_only", "running_max", "any_change"), function(r) {
+  sum(independent_events(
+    waterhole, "datetime", "station", "species",
+    threshold = 30,
+    rule = r,
+    metadata = if (r == "time_only") NULL else
+      c("males", "females", "juveniles"),
+    count = "group_size"
+  )$independent)
+}, numeric(1))
+```
+
+This is an educational simulation, not empirical validation. Its constructed
+labels make code behaviour checkable, but conclusions about accuracy should
+come from simulations spanning plausible observation processes and from manual
+image review conducted independently of the metadata being tested.
 
 ## Relationship to camtrapR
 
-`camtrapEvents` is not a replacement for [camtrapR](https://jniedballa.github.io/camtrapR/),
-which covers image management, species identification workflows, occupancy and
-SECR inputs. It addresses one step camtrapR treats as purely temporal.
+`camtrapEvents` complements rather than replaces
+[camtrapR](https://jniedballa.github.io/camtrapR/). It accepts a plain data frame,
+including output from `camtrapR::recordTable(minDeltaTime = 0)`, Camelot exports,
+or Camera Trap Data Package observation tables.
 
 | | camtrapR | camtrapEvents |
 |---|---|---|
 | Time threshold | `minDeltaTime` | `threshold` |
 | Reference point | `deltaTimeComparedTo` | `compare_to` |
-| Station vs camera grouping | `camerasIndependent` | `station` |
-| Metadata-conditional independence | not available | `rule` + `metadata` |
-| Threshold sensitivity reporting | not available | `independence_sensitivity()` |
+| Metadata-conditional classification | not available | `rule` + `metadata` |
+| Short settling window | not available | `metadata_refractory` |
+| Threshold/rule sensitivity | not available | `independence_sensitivity()` |
 
-`camtrapEvents` takes a plain data frame, so it runs on the output of
-`camtrapR::recordTable(minDeltaTime = 0)`, a Camelot export, or a Camera Trap
-Data Package `observations` table.
+## Reporting template
 
-## Example data with known ground truth
+> Records were grouped by species and camera station. A new event was retained
+> after more than 30 minutes without a record, or when an age- or sex-class count
+> exceeded the maximum already observed in the current time burst
+> (`camtrapEvents` v0.3.0, `rule = "running_max"`,
+> `compare_to = "last_record"`). Metadata-triggered events were not allowed
+> within two minutes of the previous retained event
+> (`metadata_refractory = 2`). Event totals under alternative thresholds and
+> rules are reported in Table S1.
 
-Real camera-trap data can never tell you which rule is right. When forty
-photographs of kob arrive over twenty minutes, nobody knows whether that was one
-herd standing about or three herds passing through.
-
-The bundled `waterhole` dataset does know, because the groups were placed
-deliberately and `true_group` records which arrival each photograph belongs to:
-
-```r
-data(waterhole)
-truth <- length(unique(waterhole$true_group))   # 670 encounters
-
-#> time_only     584 events (bias -12.8%)   2046 individuals
-#> running_max   677 events (bias  +1.0%)   2046 individuals
-#> any_change    741 events (bias +10.6%)   2046 individuals
-```
-
-Two things to notice. `running_max` lands within 1% of the truth here, while a
-time-only rule misses 13% of encounters and `any_change` invents 11%. And the
-individual count is **identical under all three rules**: splitting a burst moves
-animals between events but cannot change how many distinct animals were inferred
-present.
-
-Per-species inflation over the time-only rule tracks group size exactly as the
-mechanism predicts:
-
-| Species | Mean group | `running_max` | `any_change` |
-|---|---|---|---|
-| *Panthera pardus* | 1 | +1.3% | +2.0% |
-| *Tragelaphus scriptus* | 2 | +9.3% | +14.6% |
-| *Kobus kob* | 6 | +19.1% | +42.6% |
-| *Papio anubis* | 8 | +36.0% | +51.8% |
-
-`inst/examples/worked_example.R` runs all of this end to end.
-
-The data are simulated. The survey that motivated this package, in Mole National
-Park, Ghana, cannot be released because it contains precise locations of
-threatened species, so `waterhole` was generated from parameters measured on it:
-a 2.83% frame-to-frame composition change rate, a 1,182-minute median gap between
-bursts, 6.63 records per burst, and a 14.1-minute mean burst duration. See
-`data-raw/make_waterhole.R`.
-
-## Whatever you choose, state it
-
-Threshold, rule and reference point are three separate decisions and none of
-them is a default. A methods section should read something like:
-
-> Detections were considered independent if separated by more than 30 minutes
-> from the previous record of the same species at the same station, or if the
-> count of any age or sex class exceeded the maximum already observed within
-> that sequence (`camtrapEvents` v0.2.0, `rule = "running_max"`,
-> `compare_to = "last_record"`). Event totals under alternative thresholds and
-> rules are given in Table S1.
+Adapt the wording to the configuration actually used; do not copy the settling
+window if it was not applied.
 
 ## Citation
 
-Two DOIs, used for different purposes:
+The concept DOI always resolves to the latest archived release:
+[`10.5281/zenodo.21628401`](https://doi.org/10.5281/zenodo.21628401).
+For exact reproducibility, cite the version DOI corresponding to the release
+used. Version 0.2.0 is archived at
+[`10.5281/zenodo.21639726`](https://doi.org/10.5281/zenodo.21639726).
 
-- **Concept DOI** `10.5281/zenodo.21628401` always resolves to the latest
-  release. This is what the badge above points to, and what `citation()` returns.
-- **Version DOIs** pin a specific release. Cite these in a manuscript so readers
-  get the exact code you ran: v0.2.0 is
-  [`10.5281/zenodo.21639726`](https://doi.org/10.5281/zenodo.21639726),
-  v0.1.0 is `10.5281/zenodo.21628402`.
+The development version is 0.3.0. Its version-specific DOI will be added after
+the release is archived on Zenodo.
 
-If you use `camtrapEvents`, please cite the software and the original
-application:
+The metadata-aware approach was first applied in:
 
-> Awini, S., Cabeza, M., Goded, S., Mahama, A. & Annorbah, N.N.D. (2026)
+> Awini, S., Cabeza, M., Goded, S., Mahama, A. & Annorbah, N.N.D. (2026).
 > Tourism alters mammal behaviour and juvenile distribution in a West African
 > protected area. *Oryx*. doi:10.1017/S0030605325102500
 

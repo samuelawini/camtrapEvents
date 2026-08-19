@@ -20,6 +20,21 @@ test_that("a single record is always independent", {
   expect_true(flag(d, threshold = 30, rule = "time_only"))
 })
 
+test_that("time_only is the safe default", {
+  d <- mk(c(0, 5), adults = c(1, 2))
+  expect_equal(flag(d, threshold = 30), c(TRUE, FALSE))
+  ## Preserve the <=0.2.0 shorthand in which supplying metadata selected the
+  ## running-maximum rule even when `rule` was not named.
+  expect_equal(flag(d, threshold = 30, metadata = "adults"), c(TRUE, TRUE))
+})
+
+test_that("sensitivity defaults to time_only when metadata are absent", {
+  d <- mk(c(0, 5), adults = c(1, 2))
+  s <- independence_sensitivity(d, "datetime", "station", "species",
+                                thresholds = c(15, 30))
+  expect_equal(s$overall$rule, c("time_only", "time_only"))
+})
+
 test_that("a gap beyond the threshold always starts a new event", {
   d <- mk(c(0, 45), adults = c(1, 1))
   expect_equal(flag(d, threshold = 30, rule = "time_only"), c(TRUE, TRUE))
@@ -154,6 +169,16 @@ test_that("NA metadata does not propagate into the flag", {
                           metadata = "adults")))
 })
 
+test_that("running maxima recover after missing metadata", {
+  d <- mk(c(0, 5, 10), adults = c(2, NA, 3))
+  expect_equal(flag(d, threshold = 30, rule = "running_max",
+                    metadata = "adults"), c(TRUE, FALSE, TRUE))
+
+  d2 <- mk(c(0, 5, 10), adults = c(NA, 2, 3))
+  expect_equal(flag(d2, threshold = 30, rule = "running_max",
+                    metadata = "adults"), c(TRUE, FALSE, TRUE))
+})
+
 test_that("informative errors are raised for bad input", {
   d <- mk(c(0, 5), adults = 1)
   expect_error(flag(d, threshold = -1, rule = "time_only"), "non-negative")
@@ -162,6 +187,31 @@ test_that("informative errors are raised for bad input", {
   expect_error(flag(d, threshold = 30, rule = "any_change"), "requires")
   expect_error(independent_events(d[0, ], "datetime", "station", "species"),
                "no rows")
+
+  factor_count <- transform(d, n_animals = factor(c(1, 2)))
+  expect_error(independent_events(factor_count, "datetime", "station", "species",
+                                  count = "n_animals"), "numeric")
+
+  negative <- mk(c(0, 5), adults = c(1, -1))
+  expect_error(flag(negative, threshold = 30, rule = "running_max",
+                    metadata = "adults"), "non-negative")
+})
+
+test_that("record_id catches duplicate photograph-species annotations", {
+  d <- mk(c(0, 0, 5), adults = c(1, 1, 2))
+  d$photo_id <- c("IMG001", "IMG001", "IMG002")
+  expect_error(
+    independent_events(d, "datetime", "station", "species",
+                       threshold = 30, rule = "time_only",
+                       record_id = "photo_id"),
+    "Consolidate multiple annotation rows"
+  )
+
+  d$species[2] <- "sp2"
+  expect_silent(independent_events(
+    d, "datetime", "station", "species", threshold = 30,
+    rule = "time_only", record_id = "photo_id"
+  ))
 })
 
 test_that("species = NULL pools all species", {
@@ -210,69 +260,95 @@ test_that("min_increase raises the evidence bar for a new event", {
                     metadata = "adults", min_increase = 0), "min_increase")
 })
 
-test_that("n_new counts each individual exactly once when a burst is split", {
-  ## 3 -> 5 -> 5 is five animals, not eight
+test_that("metadata_refractory provides a two-time-scale filter", {
+  ## The 3 -> 5 -> 2 fluctuation is absorbed into the running maximum during
+  ## the settling window. A later rise above that maximum can open an event.
+  d <- mk(c(0, 0.5, 1, 5), adults = c(3, 5, 2, 6))
+  single <- flag(d, threshold = 30, rule = "running_max",
+                 metadata = "adults", metadata_refractory = 0)
+  two_scale <- flag(d, threshold = 30, rule = "running_max",
+                    metadata = "adults", metadata_refractory = 2)
+  expect_equal(single, c(TRUE, TRUE, FALSE, TRUE))
+  expect_equal(two_scale, c(TRUE, FALSE, FALSE, TRUE))
+})
+
+test_that("the refractory boundary is inclusive and time gaps still win", {
+  d <- mk(c(0, 2, 2.1, 45), adults = c(1, 2, 3, 3))
+  expect_equal(flag(d, threshold = 30, rule = "running_max",
+                    metadata = "adults", metadata_refractory = 2),
+               c(TRUE, FALSE, TRUE, TRUE))
+  expect_error(flag(d, threshold = 30, rule = "running_max",
+                    metadata = "adults", metadata_refractory = 31),
+               "between 0 and")
+  expect_error(flag(d, threshold = 30, rule = "running_max",
+                    metadata = "adults", metadata_refractory = -1),
+               "between 0 and")
+})
+
+test_that("count_increment allocates a burst-wise observed maximum", {
+  ## 3 -> 5 -> 5 contributes increments 3 and 2, not duplicated counts 3 and 5
   d <- mk(c(0, 5, 10), adults = c(3, 5, 5))
   out <- independent_events(d, "datetime", "station", "species",
                             threshold = 30, rule = "running_max",
                             metadata = "adults")
   expect_equal(out$independent, c(TRUE, TRUE, FALSE))
-  expect_equal(sum(out$n_new[out$independent]), 5)
-  expect_equal(out$n_new[out$independent], c(3, 2))
+  expect_equal(sum(out$count_increment[out$independent]), 5)
+  expect_equal(out$count_increment[out$independent], c(3, 2))
+  expect_equal(out$n_new, out$count_increment)
 })
 
-test_that("n_new equals the burst maximum when nothing is split", {
+test_that("count_increment equals the observed burst maximum when unsplit", {
   ## a group of 3 seen repeatedly is one encounter of three animals
   d <- mk(c(0, 5, 10), adults = c(3, 2, 3))
   out <- independent_events(d, "datetime", "station", "species",
                             threshold = 30, rule = "time_only", count = "adults")
   expect_equal(sum(out$independent), 1L)
-  expect_equal(sum(out$n_new[out$independent]), 3)
+  expect_equal(sum(out$count_increment[out$independent]), 3)
 })
 
-test_that("n_new is NA under time_only unless a group size is supplied", {
+test_that("count_increment is NA unless a group size can be obtained", {
   d <- mk(c(0, 5), adults = c(3, 3))
   bare <- independent_events(d, "datetime", "station", "species",
                              threshold = 30, rule = "time_only")
-  expect_true(all(is.na(bare$n_new)))
+  expect_true(all(is.na(bare$count_increment)))
 })
 
-test_that("an event opened by a decrease contributes no new individuals", {
-  ## any_change splits on 5 -> 3, but no animal arrived
+test_that("an event opened by a decrease has zero count increment", {
+  ## any_change splits on 5 -> 3, but the observed maximum did not rise
   d <- mk(c(0, 5), adults = c(5, 3))
   out <- independent_events(d, "datetime", "station", "species",
                             threshold = 30, rule = "any_change",
                             metadata = "adults")
   expect_equal(out$independent, c(TRUE, TRUE))
-  expect_equal(out$n_new[out$independent], c(5, 0))
-  expect_equal(sum(out$n_new[out$independent]), 5)
+  expect_equal(out$count_increment[out$independent], c(5, 0))
+  expect_equal(sum(out$count_increment[out$independent]), 5)
 })
 
-test_that("n_new resets across bursts", {
+test_that("count_increment resets across bursts", {
   d <- mk(c(0, 200), adults = c(3, 4))
   out <- independent_events(d, "datetime", "station", "species",
                             threshold = 30, rule = "running_max",
                             metadata = "adults")
-  expect_equal(out$n_new[out$independent], c(3, 4))
+  expect_equal(out$count_increment[out$independent], c(3, 4))
 })
 
-test_that("n_new uses count when supplied and metadata sum otherwise", {
+test_that("count_increment uses count when supplied and metadata sum otherwise", {
   d <- mk(c(0, 5), males = c(1, 2), females = c(2, 2), n_animals = c(3, 4))
   a <- independent_events(d, "datetime", "station", "species", threshold = 30,
                           rule = "running_max", metadata = c("males", "females"),
                           count = "n_animals")
-  expect_equal(sum(a$n_new[a$independent]), 4)
+  expect_equal(sum(a$count_increment[a$independent]), 4)
 
   b <- independent_events(d, "datetime", "station", "species", threshold = 30,
                           rule = "running_max", metadata = c("males", "females"))
-  expect_equal(sum(b$n_new[b$independent]), 4)
+  expect_equal(sum(b$count_increment[b$independent]), 4)
 })
 
-test_that("n_new is NA when no group size can be determined", {
+test_that("count_increment is NA for non-numeric metadata without count", {
   d <- mk(c(0, 5), behaviour = c("passing", "drinking"))
   out <- independent_events(d, "datetime", "station", "species", threshold = 30,
                             rule = "any_change", metadata = "behaviour")
-  expect_true(all(is.na(out$n_new)))
+  expect_true(all(is.na(out$count_increment)))
 })
 
 test_that("event totals decrease monotonically as the threshold increases", {

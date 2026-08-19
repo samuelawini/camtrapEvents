@@ -25,12 +25,12 @@ bibentry(
   title    = "camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data",
   author   = person("Samuel", "Awini"),
   year     = 2026,
-  note     = "R package version 0.2.0",
+  note     = "R package version 0.3.0",
   doi      = "10.5281/zenodo.21628401",
   url      = "https://github.com/awsamu/camtrapEvents",
   textVersion = paste(
     "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
-    "for Camera-Trap Data. R package version 0.2.0.",
+    "for Camera-Trap Data. R package version 0.3.0.",
     "doi:10.5281/zenodo.21628401"
   )
 )

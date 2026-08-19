@@ -1,39 +1,32 @@
+# camtrapEvents 0.3.0
+
+* Adds `metadata_refractory`, an optional inner settling window during which
+  metadata update the running state but cannot open another event. This exposes
+  a two-time-scale alternative while retaining `0` as the backward-compatible
+  default.
+* Renames the derived quantity `n_new` to `count_increment`. The old name remains
+  as a compatibility alias, but the documentation now states its correct
+  interpretation: an increment in the maximum observed count, not proof of the
+  number or identity of distinct animals.
+* Adds optional `record_id` validation to catch multiple annotation rows for the
+  same photograph and species before they are treated as separate detections.
+* Makes `time_only` the safe default for `independent_events()`.
+* Fixes running-maximum state after missing metadata so that one `NA` value does
+  not disable later comparisons.
+* Validates that count fields are numeric and non-negative, and passes
+  `min_increase` through `independence_sensitivity()`.
+* Expands tests and documentation around input units, uncertainty, sensitivity,
+  and the distinction between encounters and observed group-size increments.
+
 # camtrapEvents 0.2.0
 
-Adds the distinction between counting *encounters* and counting *individuals*.
-
-* `independent_events()` gains an `n_new` column: individuals seen at each event
-  that were not already counted earlier in the same burst. Summing `n_new` over
-  independent records counts each animal exactly once, which is the correct
-  numerator for an individual-based relative abundance index. Taking the group
-  size of each split event instead double-counts animals that were already
-  present.
-* `independent_events()` gains a `min_increase` argument controlling how far a
-  count must exceed the running maximum before it counts as evidence of a new
-  individual under `rule = "running_max"`. The default of 1 preserves previous
-  behaviour; raising it guards against miscounting by +/-1.
-* Documentation gains an "Events versus individuals" section explaining when to
-  use `event_id` and when to use `n_new`.
-
-Note for users of 0.1.0: event flagging is unchanged at `min_increase = 1`, so
-existing results are unaffected.
+* Added `n_new`, now retained as a deprecated alias of `count_increment`, and
+  `min_increase` for raising the evidence threshold under `running_max`.
+* Event flagging at `min_increase = 1` was unchanged from version 0.1.0.
 
 # camtrapEvents 0.1.0
 
-First release.
-
-* `independent_events()` collapses camera-trap records into independent
-  detection events using a time threshold plus, optionally, record-level
-  metadata. Three rules: `time_only` (the conventional fixed-threshold filter),
-  `any_change` (any metadata difference opens a new event, as used in Awini et
-  al. 2026) and `running_max` (only a count exceeding the running maximum for
-  the current burst opens a new event).
-* `compare_to` selects whether the time gap is measured from the previous
-  record or the last retained event, matching the semantics of
-  `camtrapR::recordTable(deltaTimeComparedTo = ...)`.
-* `independence_sensitivity()` runs the threshold-by-rule grid and returns
-  overall counts, per-species counts, and per-species inflation relative to the
-  pure time rule.
-* Returns `independent`, `event_id` and `burst_id` so dependent records can be
-  aggregated back onto their event.
-* Base R only, no hard dependencies.
+* First release with `time_only`, `running_max`, and `any_change` rules.
+* Added `compare_to`, event and burst identifiers, and threshold-by-rule
+  sensitivity summaries.
+* Base R implementation with no hard dependencies.

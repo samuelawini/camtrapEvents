@@ -1,23 +1,24 @@
 Package: camtrapEvents
 Title: Metadata-Aware Independence Filtering for Camera-Trap Data
-Version: 0.2.0
+Version: 0.3.0
 Authors@R:
     person("Samuel", "Awini", email = "winsamuel@hotmail.com",
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0270-0345"))
-Description: Collapses repeated camera-trap records into independent detection
-    events. Conventional filters use a fixed time threshold alone, which cannot
-    distinguish an animal lingering in front of the camera from the arrival of
-    new individuals. This package lets the independence decision also use
-    record-level metadata such as group size, age and sex counts, behaviour or
-    individual identity, and provides tools to report how sensitive event totals
-    are to the threshold and rule chosen. Implements the approach of Awini et
+Description: Classifies repeated camera-trap records into detection events.
+    In addition to a conventional fixed time threshold, observable metadata
+    such as group size, age and sex counts, behaviour or identity labels can
+    contribute evidence for a new event. Conservative running-maximum and
+    optional two-time-scale rules limit repeated splitting as animals move in
+    and out of view. Sensitivity tools make the effects of threshold and rule
+    choices explicit. Implements and extends the approach applied by Awini et
     al. (2026) <doi:10.1017/S0030605325102500>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0)
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/awsamu/camtrapEvents
 BugReports: https://github.com/awsamu/camtrapEvents/issues

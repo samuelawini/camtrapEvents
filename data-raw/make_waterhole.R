@@ -3,30 +3,31 @@
 ##
 ##  The dataset that motivated this package (Mole National Park, Ghana) cannot
 ##  be released, because it contains precise locations of threatened species.
-##  This is a simulated stand-in with the same structure and statistical
-##  character, generated from parameters measured on that survey:
+##  This is an educational simulation with the same broad structure, generated
+##  from parameters informed by that survey:
 ##
-##    frame-to-frame composition change rate   2.83 %
-##    median gap between bursts              1182 min
+##    per-frame composition refresh chance     2.83 %
+##    mean exponential gap between bursts    1182 min
 ##    mean records per burst                    6.63
 ##    mean burst duration                      14.1 min
 ##
-##  Four species spanning the sociality gradient, so the group-size effect on
-##  each rule is visible. Ground truth is retained in `true_group`, which is not
-##  available in real data, so users can check any rule against it.
+##  Four species span a group-size gradient. The constructed generating label is
+##  retained in `true_group`, so users can inspect rule behaviour. This dataset
+##  is not presented as empirical validation of rule accuracy.
 ##
 ##  Run with: source("data-raw/make_waterhole.R")
 ################################################################################
 
 set.seed(4242)
 
-GAP_LONG  <- 1182
+GAP_LONG  <- 1182  # exponential mean in this educational generator
 LINGER_MU <- 14.1
 FRAMES_MU <- 6.63
 P_CHANGE  <- 0.0283
 P_VISIBLE <- 0.75
 
-## species, mean group size, probability a new arrival overlaps the previous one
+## Species, mean group size, and probability that the next arrival occurs within
+## 30 minutes after the preceding simulated group departs.
 spp <- data.frame(
   species    = c("Kobus kob", "Papio anubis", "Tragelaphus scriptus",
                  "Panthera pardus"),

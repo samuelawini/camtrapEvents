@@ -1,0 +1,155 @@
+---
+title: "Choosing an independence rule"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing an independence rule}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(camtrapEvents)
+```
+
+## What the filter can and cannot infer
+
+An independence filter assigns repeated photographs to analytical events. It
+does not observe the true number of biological encounters. A time gap, a larger
+visible group, a new age or sex class, and a changed identity label can all be
+evidence for a new encounter, but each can also arise within one encounter.
+
+The defensible workflow is therefore to state the rule, inspect sensitivity,
+and validate a subset against evidence that was not itself used by the rule.
+Unique markings, tags, synchronized video, or a blinded review of the original
+images can provide such evidence. Reusing the same count and demographic fields
+as both the rule input and its validation target is circular.
+
+## Prepare one detection per row
+
+Each input row must represent one unique photograph-species detection. Some
+image-processing exports store male and female annotations for the same image on
+separate rows. Combine those annotations before filtering. If a photograph ID
+is available, ask the function to verify uniqueness:
+
+```{r duplicate-example, error=TRUE}
+d <- data.frame(
+  station = "A",
+  species = "Kobus kob",
+  photo_id = c("IMG001", "IMG001"),
+  datetime = as.POSIXct(c("2021-01-01 08:00:00", "2021-01-01 08:00:00"),
+                        tz = "UTC"),
+  females = c(2, 0),
+  males = c(0, 1)
+)
+
+independent_events(
+  d, "datetime", "station", "species",
+  record_id = "photo_id", rule = "time_only"
+)
+```
+
+The error is intentional. Whether split rows should be summed, maximized, or
+otherwise reconciled depends on how the source software encoded annotations.
+The package does not guess.
+
+## Rule meanings
+
+`time_only` starts a new event after a gap greater than `threshold`. Inside a
+time burst, all records remain in one event. Use it when metadata are absent or
+too uncertain to support classification.
+
+`running_max` also starts an event when a numeric field exceeds its maximum in
+the current burst. In a sequence of visible counts 5, 3, 5, the second and third
+records do not open events. A later count of 6 can. The rule reduces repeated
+splitting caused by oscillating counts, but improved visibility can still mimic
+an arrival.
+
+`any_change` starts an event whenever a selected field differs from the
+preceding record. It supports categorical fields, including high-confidence
+identity labels. With ordinary frame-level counts, however, it can repeatedly
+split one moving group.
+
+```{r rules}
+recs <- data.frame(
+  station = "A",
+  species = "Kobus kob",
+  datetime = as.POSIXct("2021-01-01 08:00:00", tz = "UTC") +
+    60 * c(0, 5, 10, 15, 90),
+  females = c(3, 5, 2, 3, 1),
+  juveniles = c(0, 0, 1, 1, 0)
+)
+
+vapply(c("time_only", "running_max", "any_change"), function(r) {
+  sum(independent_events(
+    recs, "datetime", "station", "species",
+    threshold = 30,
+    rule = r,
+    metadata = if (r == "time_only") NULL else c("females", "juveniles")
+  )$independent)
+}, numeric(1))
+```
+
+More retained events do not imply greater accuracy. The direction of error
+depends on the balance between separate encounters that collide inside the
+threshold and within-encounter metadata changes.
+
+## Optional inner settling window
+
+`metadata_refractory` supplies a second time scale. Records inside the short
+window update the running maximum but cannot open a metadata-triggered event.
+The outer threshold continues to define a new burst after inactivity.
+
+```{r refractory}
+rapid <- data.frame(
+  station = "A",
+  species = "Kobus kob",
+  datetime = as.POSIXct("2021-01-01 08:00:00", tz = "UTC") +
+    60 * c(0, 0.5, 1, 5),
+  adults = c(3, 5, 2, 6)
+)
+
+independent_events(
+  rapid, "datetime", "station", "species",
+  threshold = 30,
+  rule = "running_max",
+  metadata = "adults",
+  metadata_refractory = 2
+)[, c("datetime", "adults", "independent", "event_id")]
+```
+
+The first three photographs remain in one event while establishing a maximum
+of five. The later count of six occurs outside the two-minute settling window
+and can open an event. This option trades sensitivity to very rapid true
+arrivals for resistance to rapid visibility changes. Treat its value as a
+parameter requiring ecological justification, not as a universal default.
+
+## Count increments are not identities
+
+`count_increment` divides the maximum observed count in a time burst across any
+events created inside that burst. It avoids summing the full visible group size
+again after every split. Its sum is a burst-wise observed maximum, not a count
+of distinct animals. The legacy name `n_new` is retained only for compatibility.
+
+## Sensitivity and reporting
+
+```{r sensitivity}
+data(waterhole)
+s <- independence_sensitivity(
+  waterhole, "datetime", "station", "species",
+  thresholds = c(15, 30, 60, 120),
+  metadata = c("males", "females", "juveniles"),
+  count = "group_size"
+)
+head(s$overall)
+```
+
+At minimum, report:
+
+1. the row unit and any consolidation of duplicate annotations;
+2. the outer threshold and whether it is measured from the previous record or
+   the previous retained event;
+3. the metadata rule and fields used;
+4. `min_increase` and `metadata_refractory` when non-default;
+5. event totals under plausible alternative settings; and
+6. how any manual validation was kept independent of the rule inputs.

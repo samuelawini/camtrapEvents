@@ -10,18 +10,22 @@ independent_events(
   station,
   species = NULL,
   threshold = 30,
-  rule = c("running_max", "any_change", "time_only"),
+  rule = c("time_only", "running_max", "any_change"),
   metadata = NULL,
   count = NULL,
   min_increase = 1,
   compare_to = c("last_record", "last_independent"),
   format = "\%Y-\%m-\%d \%H:\%M:\%S",
   tz = "UTC",
-  filter = FALSE
+  filter = FALSE,
+  record_id = NULL,
+  metadata_refractory = 0
 )
 }
 \arguments{
-\item{data}{A data frame of camera-trap records, one row per detection.}
+\item{data}{A data frame of camera-trap records, one row per unique
+photograph-species detection. Multiple annotation rows for the same
+photograph and species must be consolidated before filtering.}
 
 \item{datetime}{Name of the date-time column. Either \code{POSIXct}, or
 character parsed with \code{format}.}
@@ -43,26 +47,30 @@ species. Pass \code{NULL} to pool all species.}
     \code{metadata} differs from the preceding record. Works with numeric or
     categorical metadata. This is the rule used in Awini et al. (2026).
     Note that it is triggered by decreases as well as increases, so with
-    noisy counts it can inflate event totals for gregarious species; see
+    noisy counts it can markedly increase event totals for gregarious species; see
     \code{vignette("choosing-a-rule")} and \code{independence_sensitivity()}.}
   \item{\code{"running_max"}}{A record starts a new event only if a numeric
     metadata column, or \code{count}, EXCEEDS the running maximum already
     observed within the current burst. Interprets only an increase above
-    everything seen so far as evidence of previously uncounted individuals.
-    Robust to frame-to-frame miscounting of a moving group. Requires numeric
-    \code{metadata}.}
-}}
+    everything seen so far as evidence consistent with an arrival not
+    represented in earlier records.
+    It is less sensitive than \code{"any_change"} to oscillating counts of a
+    moving group. Requires numeric \code{metadata}.}
+}
+If omitted, the function uses \code{"time_only"} when no metadata are
+supplied and \code{"running_max"} when metadata are supplied, preserving
+the shorthand used in package versions up to 0.2.0.}
 
 \item{metadata}{Character vector of column names carrying the metadata used
 by \code{rule}. Ignored when \code{rule = "time_only"}.}
 
 \item{count}{Optional name of a total group-size column, used by
 \code{"running_max"} in addition to \code{metadata}, and used to compute
-\code{n_new}. If absent, group size falls back to the sum of numeric
+\code{count_increment}. If absent, group size falls back to the sum of numeric
 \code{metadata}.}
 
 \item{min_increase}{How far a count must exceed the running maximum before it
-counts as evidence of a new individual, under \code{"running_max"}. The
+is treated as evidence for a new event under \code{"running_max"}. The
 default of 1 accepts any increase. Raise it where tagging is noisy: a rise
 from 3 to 4 animals is exactly what a miscount looks like, whereas a rise
 from 3 to 7 is not. Ignored by the other rules.}
@@ -83,16 +91,30 @@ Equivalent to \pkg{camtrapR}'s \code{deltaTimeComparedTo}.}
 
 \item{filter}{If \code{TRUE}, return only independent records. If \code{FALSE}
 (default), return all records with the flag columns added.}
+
+\item{record_id}{Optional name of a column uniquely identifying a photograph
+or trigger. When supplied, duplicate identifiers within a station-species
+group cause an error. This catches split annotation rows that would
+otherwise be mistaken for separate detections.}
+
+\item{metadata_refractory}{Optional short settling window in minutes. Within
+this period after the last retained event, metadata may update the running
+maxima but cannot itself open another event. A gap beyond \code{threshold}
+still opens an event. The default, 0, preserves the single-threshold
+behaviour. Positive values provide the two-time-scale filter discussed in
+the package vignette and must not exceed \code{threshold}.}
 }
 \value{
-\code{data} with four columns added:
+\code{data} with five columns added:
   \describe{
     \item{\code{independent}}{logical, \code{TRUE} for an independent event}
     \item{\code{event_id}}{integer, consecutive event number within station and species}
     \item{\code{burst_id}}{integer, the time-defined burst the record belongs to}
-    \item{\code{n_new}}{numeric, individuals seen at this event that were not
-      already counted earlier in the same burst; \code{NA} when no group size
-      is available}
+    \item{\code{count_increment}}{numeric, the increase in the maximum
+      observed group size allocated to this event; \code{NA} when no group
+      size is available}
+    \item{\code{n_new}}{deprecated compatibility alias of
+      \code{count_increment}}
   }
   Row order is preserved.
 }
@@ -121,26 +143,32 @@ separately within the window are three encounters, and a time-only rule
 wrongly merges them.
 
 Use \code{event_id} for anything that counts encounters, such as diel activity
-patterns or occupancy. Use \code{n_new} for anything that counts animals, such
-as an individual-based relative abundance index. Summing \code{n_new} over
-independent records gives the number of distinct individuals, counting each
-animal exactly once even where a rule has split a burst:
+patterns or encounter-rate indices. \code{count_increment} is a separate
+descriptive quantity: summing it over retained records gives the sum of the
+maximum observed group size in each time-defined burst, without double-
+counting increases when a metadata rule splits that burst:
 
 \preformatted{
 ev <- independent_events(recs, ..., filter = TRUE)
-sum(ev$n_new)            # distinct individuals
+sum(ev$count_increment)  # sum of burst-wise observed maxima
 nrow(ev)                 # encounters
 }
 
-Taking the group size of each split event instead would double-count the
-animals that were already present.
+This is not an identity estimate. Animals can leave, re-enter, remain hidden,
+or be replaced by similar-looking individuals, so neither
+\code{count_increment} nor its compatibility alias \code{n_new} proves how
+many distinct individuals were present. Individual-level inference requires
+independent identity evidence.
 }
 
 \section{Choosing a rule}{
 
 \code{"time_only"} is the safe default when metadata is unreliable or absent.
-\code{"running_max"} is recommended when age and sex counts are available,
-because it responds to evidence of new individuals but not to counting noise.
+\code{"running_max"} is the more conservative metadata rule when age and sex
+counts are available, because decreases and returns to values already seen do
+not open events. It can still over-split one encounter when visibility first
+improves, so it should be checked against \code{"time_only"} rather than
+treated as ground truth.
 \code{"any_change"} is the most permissive and should be reported alongside
 \code{independence_sensitivity()} output so readers can see how much of the
 event total depends on it.

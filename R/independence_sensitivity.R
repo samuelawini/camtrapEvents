@@ -6,9 +6,10 @@
 #' turns an arbitrary decision into a stated sensitivity analysis.
 #'
 #' The per-species output is the more diagnostic of the two. If the extra events
-#' produced by a metadata rule are concentrated in gregarious species, the rule
-#' is introducing a bias that correlates with sociality, which will propagate
-#' into any comparative index such as RAI.
+#' produced by a metadata rule are concentrated in gregarious species, a
+#' comparative index such as RAI is especially sensitive to the rule chosen.
+#' The direction of the difference alone does not establish which rule is more
+#' accurate.
 #'
 #' @inheritParams independent_events
 #' @param thresholds Numeric vector of thresholds in minutes.
@@ -53,11 +54,15 @@ independence_sensitivity <- function(data,
                                      compare_to = c("last_record", "last_independent"),
                                      format     = "%Y-%m-%d %H:%M:%S",
                                      tz         = "UTC",
-                                     by_species = TRUE) {
+                                     by_species = TRUE,
+                                     record_id  = NULL,
+                                     min_increase = 1,
+                                     metadata_refractory = 0) {
 
   compare_to <- match.arg(compare_to)
-  rules      <- match.arg(rules, c("time_only", "running_max", "any_change"),
-                          several.ok = TRUE)
+  if (missing(rules) && !length(metadata)) rules <- "time_only"
+  rules <- match.arg(rules, c("time_only", "running_max", "any_change"),
+                     several.ok = TRUE)
   if (by_species && is.null(species)) by_species <- FALSE
 
   overall <- list()
@@ -69,6 +74,9 @@ independence_sensitivity <- function(data,
       flagged <- independent_events(
         data, datetime, station, species,
         threshold = th, rule = rl, metadata = metadata, count = count,
+        record_id = record_id,
+        min_increase = min_increase,
+        metadata_refractory = metadata_refractory,
         compare_to = compare_to, format = format, tz = tz, filter = FALSE
       )
       kept <- flagged[flagged$independent, , drop = FALSE]
@@ -76,6 +84,7 @@ independence_sensitivity <- function(data,
       overall[[length(overall) + 1L]] <- data.frame(
         rule         = rl,
         threshold    = th,
+        metadata_refractory = metadata_refractory,
         records      = nrow(data),
         events       = nrow(kept),
         pct_retained = round(100 * nrow(kept) / nrow(data), 2),
@@ -88,6 +97,7 @@ independence_sensitivity <- function(data,
         names(tab) <- c("species", "events")
         tab$rule      <- rl
         tab$threshold <- th
+        tab$metadata_refractory <- metadata_refractory
         persp[[length(persp) + 1L]] <- tab
       }
     }
@@ -100,13 +110,15 @@ independence_sensitivity <- function(data,
   inflation <- NULL
   if (!is.null(by_sp) && "time_only" %in% rules && length(rules) > 1L) {
     base <- by_sp[by_sp$rule == "time_only",
-                  c("species", "threshold", "events")]
-    names(base)[3] <- "time_only"
+                  c("species", "threshold", "metadata_refractory", "events")]
+    names(base)[names(base) == "events"] <- "time_only"
     inflation <- base
     for (rl in setdiff(rules, "time_only")) {
-      add <- by_sp[by_sp$rule == rl, c("species", "threshold", "events")]
-      names(add)[3] <- rl
-      inflation <- merge(inflation, add, by = c("species", "threshold"),
+      add <- by_sp[by_sp$rule == rl,
+                   c("species", "threshold", "metadata_refractory", "events")]
+      names(add)[names(add) == "events"] <- rl
+      inflation <- merge(inflation, add,
+                         by = c("species", "threshold", "metadata_refractory"),
                          all.x = TRUE)
       inflation[[rl]][is.na(inflation[[rl]])] <- 0
       inflation[[paste0(rl, "_pct")]] <-
