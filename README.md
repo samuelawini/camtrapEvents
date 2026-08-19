@@ -195,11 +195,12 @@ window if it was not applied.
 The concept DOI always resolves to the latest archived release:
 [`10.5281/zenodo.21628401`](https://doi.org/10.5281/zenodo.21628401).
 For exact reproducibility, cite the version DOI corresponding to the release
-used. Version 0.2.0 is archived at
+used. Version 0.3.0 is archived at
+[`10.5281/zenodo.22010874`](https://doi.org/10.5281/zenodo.22010874).
+The earlier version 0.2.0 is archived at
 [`10.5281/zenodo.21639726`](https://doi.org/10.5281/zenodo.21639726).
 
-The development version is 0.3.0. Its version-specific DOI will be added after
-the release is archived on Zenodo.
+The current release is 0.3.0.
 
 The metadata-aware approach was first applied in:
 
