@@ -2,7 +2,7 @@ citHeader("To cite camtrapEvents, cite the software record below. If you also
 discuss the study in which the metadata-aware approach was first applied, cite
 the Oryx article as well.")
 
-package_doi <- "10.5281/zenodo.21628401"
+package_doi <- "10.5281/zenodo.22056886"
 
 bibentry(
   bibtype  = "Manual",
