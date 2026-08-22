@@ -28,7 +28,7 @@ library(camtrapEvents)
 ```
 
 For exact reproduction of an archived release, add its tag. For example,
-`remotes::install_github("awsamu/camtrapEvents@v0.3.0")` installs version 0.3.0.
+`remotes::install_github("awsamu/camtrapEvents@v0.3.1")` installs version 0.3.1.
 
 ## Input contract
 
@@ -214,7 +214,9 @@ window if it was not applied.
 The concept DOI always resolves to the latest archived release:
 [`10.5281/zenodo.21628401`](https://doi.org/10.5281/zenodo.21628401).
 For exact reproducibility, cite the version DOI corresponding to the release
-used. Version 0.3.0 is archived at
+used. Version 0.3.1 is archived at
+[`10.5281/zenodo.22056886`](https://doi.org/10.5281/zenodo.22056886).
+Version 0.3.0 is archived at
 [`10.5281/zenodo.22010874`](https://doi.org/10.5281/zenodo.22010874).
 The earlier version 0.2.0 is archived at
 [`10.5281/zenodo.21639726`](https://doi.org/10.5281/zenodo.21639726).
