@@ -1,6 +1,6 @@
 Package: camtrapEvents
 Title: Metadata-Aware Independence Filtering for Camera-Trap Data
-Version: 0.3.0
+Version: 0.3.1
 Authors@R:
     person("Samuel", "Awini", email = "winsamuel@hotmail.com",
            role = c("aut", "cre"),
@@ -20,6 +20,8 @@ Depends: R (>= 3.5.0)
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/awsamu/camtrapEvents
+Config/Needs/check: rcmdcheck, roxygen2
+URL: https://github.com/awsamu/camtrapEvents,
+    https://doi.org/10.5281/zenodo.21628401
 BugReports: https://github.com/awsamu/camtrapEvents/issues
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

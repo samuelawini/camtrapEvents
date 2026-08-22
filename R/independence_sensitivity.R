@@ -15,11 +15,17 @@
 #' @param thresholds Numeric vector of thresholds in minutes.
 #' @param rules Character vector of rules to compare.
 #' @param by_species If \code{TRUE}, also return counts per species.
+#' @param metadata_refractory A single settling-window value in minutes, applied
+#'   to every configuration. It must not exceed the smallest value in
+#'   \code{thresholds}. To compare several settling windows, rerun the function
+#'   for each value.
 #'
 #' @return A list with:
 #'   \describe{
-#'     \item{\code{overall}}{data frame: rule, threshold, records, events, pct_retained}
-#'     \item{\code{by_species}}{data frame of per-species counts, or \code{NULL}}
+#'     \item{\code{overall}}{data frame: rule, threshold,
+#'       metadata_refractory, records, events and pct_retained}
+#'     \item{\code{by_species}}{data frame of per-species event counts with rule,
+#'       threshold and metadata_refractory, or \code{NULL}}
 #'     \item{\code{inflation}}{per-species percentage increase of each rule over
 #'       \code{"time_only"} at the same threshold, or \code{NULL} if
 #'       \code{"time_only"} was not among \code{rules}}
@@ -64,6 +70,21 @@ independence_sensitivity <- function(data,
   rules <- match.arg(rules, c("time_only", "running_max", "any_change"),
                      several.ok = TRUE)
   if (by_species && is.null(species)) by_species <- FALSE
+
+  if (!is.numeric(thresholds) || !length(thresholds) || anyNA(thresholds) ||
+      any(thresholds < 0)) {
+    stop("`thresholds` must be a non-empty numeric vector of non-negative minutes.",
+         call. = FALSE)
+  }
+  if (!is.numeric(metadata_refractory) || length(metadata_refractory) != 1L ||
+      is.na(metadata_refractory) || metadata_refractory < 0) {
+    stop("`metadata_refractory` must be a single non-negative number of minutes.",
+         call. = FALSE)
+  }
+  if (metadata_refractory > min(thresholds)) {
+    stop("`metadata_refractory` must not exceed the smallest value in `thresholds`.",
+         call. = FALSE)
+  }
 
   overall <- list()
   persp   <- list()
