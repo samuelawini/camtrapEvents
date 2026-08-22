@@ -62,7 +62,10 @@ supplied and \code{"running_max"} when metadata are supplied, preserving
 the shorthand used in package versions up to 0.2.0.}
 
 \item{metadata}{Character vector of column names carrying the metadata used
-by \code{rule}. Ignored when \code{rule = "time_only"}.}
+by \code{rule}. Ignored for event classification when
+\code{rule = "time_only"}. If \code{count} is absent and every metadata
+column is numeric, their row sum is still used as the fallback group size
+for \code{count_increment}.}
 
 \item{count}{Optional name of a total group-size column, used by
 \code{"running_max"} in addition to \code{metadata}, and used to compute
@@ -108,15 +111,19 @@ the package vignette and must not exceed \code{threshold}.}
 \code{data} with five columns added:
   \describe{
     \item{\code{independent}}{logical, \code{TRUE} for an independent event}
-    \item{\code{event_id}}{integer, consecutive event number within station and species}
-    \item{\code{burst_id}}{integer, the time-defined burst the record belongs to}
+    \item{\code{event_id}}{integer, consecutive event number within station
+      and species}
+    \item{\code{burst_id}}{integer, consecutive time-defined burst number
+      within station and species}
     \item{\code{count_increment}}{numeric, the increase in the maximum
       observed group size allocated to this event; \code{NA} when no group
       size is available}
     \item{\code{n_new}}{deprecated compatibility alias of
       \code{count_increment}}
   }
-  Row order is preserved.
+  Row order is preserved. Neither identifier is globally unique: use
+  station, species and \code{event_id} or \code{burst_id} together when
+  grouping records across the full dataset.
 }
 \description{
 Camera traps fire repeatedly on the same animal or group, so raw records are

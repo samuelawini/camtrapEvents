@@ -1,3 +1,15 @@
+# camtrapEvents 0.3.1
+
+* Fixes `count_increment` when counts are missing in an early event but become
+  available later in the same burst.
+* Validates `metadata_refractory` against the smallest threshold in
+  `independence_sensitivity()` and documents how to compare settling windows.
+* Clarifies that event and burst identifiers are local to each station-species
+  group and that count increments should be summed only over retained rows.
+* Makes the README examples runnable from a fresh R session and keeps package
+  citation metadata synchronized with the package version.
+* Adds automated cross-platform package checks and contribution guidance.
+
 # camtrapEvents 0.3.0
 
 * Adds `metadata_refractory`, an optional inner settling window during which

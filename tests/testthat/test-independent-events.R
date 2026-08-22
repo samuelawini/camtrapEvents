@@ -272,6 +272,26 @@ test_that("metadata_refractory provides a two-time-scale filter", {
   expect_equal(two_scale, c(TRUE, FALSE, FALSE, TRUE))
 })
 
+test_that("sensitivity validates the settling window against every threshold", {
+  d <- mk(c(0, 5, 45), adults = c(3, 5, 2))
+
+  expect_error(
+    independence_sensitivity(
+      d, "datetime", "station", "species",
+      thresholds = c(0, 15, 30), rules = "running_max",
+      metadata = "adults", metadata_refractory = 2
+    ),
+    "smallest value"
+  )
+
+  s <- independence_sensitivity(
+    d, "datetime", "station", "species",
+    thresholds = c(2, 15, 30), rules = "running_max",
+    metadata = "adults", metadata_refractory = 2
+  )
+  expect_equal(s$overall$metadata_refractory, rep(2, 3))
+})
+
 test_that("the refractory boundary is inclusive and time gaps still win", {
   d <- mk(c(0, 2, 2.1, 45), adults = c(1, 2, 3, 3))
   expect_equal(flag(d, threshold = 30, rule = "running_max",
@@ -311,6 +331,20 @@ test_that("count_increment is NA unless a group size can be obtained", {
   bare <- independent_events(d, "datetime", "station", "species",
                              threshold = 30, rule = "time_only")
   expect_true(all(is.na(bare$count_increment)))
+})
+
+test_that("count_increment recovers when counts become available", {
+  d <- mk(c(0, 5),
+          behaviour = c("passing", "drinking"),
+          n_animals = c(NA_real_, 3))
+  out <- independent_events(
+    d, "datetime", "station", "species",
+    threshold = 30, rule = "any_change",
+    metadata = "behaviour", count = "n_animals"
+  )
+
+  expect_equal(out$independent, c(TRUE, TRUE))
+  expect_equal(out$count_increment[out$independent], c(NA_real_, 3))
 })
 
 test_that("an event opened by a decrease has zero count increment", {

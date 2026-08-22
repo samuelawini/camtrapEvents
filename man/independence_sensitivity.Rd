@@ -41,7 +41,10 @@ species. Pass \code{NULL} to pool all species.}
 \item{rules}{Character vector of rules to compare.}
 
 \item{metadata}{Character vector of column names carrying the metadata used
-by \code{rule}. Ignored when \code{rule = "time_only"}.}
+by \code{rule}. Ignored for event classification when
+\code{rule = "time_only"}. If \code{count} is absent and every metadata
+column is numeric, their row sum is still used as the fallback group size
+for \code{count_increment}.}
 
 \item{count}{Optional name of a total group-size column, used by
 \code{"running_max"} in addition to \code{metadata}, and used to compute
@@ -75,18 +78,18 @@ default of 1 accepts any increase. Raise it where tagging is noisy: a rise
 from 3 to 4 animals is exactly what a miscount looks like, whereas a rise
 from 3 to 7 is not. Ignored by the other rules.}
 
-\item{metadata_refractory}{Optional short settling window in minutes. Within
-this period after the last retained event, metadata may update the running
-maxima but cannot itself open another event. A gap beyond \code{threshold}
-still opens an event. The default, 0, preserves the single-threshold
-behaviour. Positive values provide the two-time-scale filter discussed in
-the package vignette and must not exceed \code{threshold}.}
+\item{metadata_refractory}{A single settling-window value in minutes, applied
+to every configuration. It must not exceed the smallest value in
+\code{thresholds}. To compare several settling windows, rerun the function
+for each value.}
 }
 \value{
 A list with:
   \describe{
-    \item{\code{overall}}{data frame: rule, threshold, records, events, pct_retained}
-    \item{\code{by_species}}{data frame of per-species counts, or \code{NULL}}
+    \item{\code{overall}}{data frame: rule, threshold,
+      metadata_refractory, records, events and pct_retained}
+    \item{\code{by_species}}{data frame of per-species event counts with rule,
+      threshold and metadata_refractory, or \code{NULL}}
     \item{\code{inflation}}{per-species percentage increase of each rule over
       \code{"time_only"} at the same threshold, or \code{NULL} if
       \code{"time_only"} was not among \code{rules}}

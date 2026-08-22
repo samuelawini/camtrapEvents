@@ -1,6 +1,24 @@
-citHeader("To cite camtrapEvents in publications, please cite the application
-paper in which the approach was introduced. A dedicated software paper is in
-preparation; this file will be updated on acceptance.")
+citHeader("To cite camtrapEvents, cite the software record below. If you also
+discuss the study in which the metadata-aware approach was first applied, cite
+the Oryx article as well.")
+
+package_doi <- "10.5281/zenodo.21628401"
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data",
+  author   = person("Samuel", "Awini",
+                    comment = c(ORCID = "0000-0003-0270-0345")),
+  year     = 2026,
+  note     = sprintf("R package version %s", meta$Version),
+  doi      = package_doi,
+  url      = "https://github.com/awsamu/camtrapEvents",
+  textVersion = paste(
+    "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
+    sprintf("for Camera-Trap Data. R package version %s.", meta$Version),
+    sprintf("doi:%s", package_doi)
+  )
+)
 
 bibentry(
   bibtype  = "Article",
@@ -9,28 +27,14 @@ bibentry(
                person("Mar", "Cabeza"),
                person("Sandra", "Goded"),
                person("Ali", "Mahama"),
-               person(c("Nathaniel", "N. D."), "Annorbah")),
+               person(c("Nathaniel", "Nii", "Djan"), "Annorbah")),
   journal  = "Oryx",
   year     = 2026,
+  pages    = "1--12",
   doi      = "10.1017/S0030605325102500",
   textVersion = paste(
     "Awini, S., Cabeza, M., Goded, S., Mahama, A. & Annorbah, N.N.D. (2026).",
     "Tourism alters mammal behaviour and juvenile distribution in a West",
-    "African protected area. Oryx. doi:10.1017/S0030605325102500"
-  )
-)
-
-bibentry(
-  bibtype  = "Manual",
-  title    = "camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data",
-  author   = person("Samuel", "Awini"),
-  year     = 2026,
-  note     = "R package version 0.3.0",
-  doi      = "10.5281/zenodo.21628401",
-  url      = "https://github.com/awsamu/camtrapEvents",
-  textVersion = paste(
-    "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
-    "for Camera-Trap Data. R package version 0.3.0.",
-    "doi:10.5281/zenodo.21628401"
+    "African protected area. Oryx, 1-12. doi:10.1017/S0030605325102500"
   )
 )

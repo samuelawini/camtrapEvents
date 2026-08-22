@@ -131,6 +131,13 @@ events created inside that burst. It avoids summing the full visible group size
 again after every split. Its sum is a burst-wise observed maximum, not a count
 of distinct animals. The legacy name `n_new` is retained only for compatibility.
 
+The value is repeated on every photograph assigned to the event when
+`filter = FALSE`. Sum it only over rows where `independent` is `TRUE`, or call
+the function with `filter = TRUE`.
+
+`event_id` and `burst_id` restart within each station-species group. Use the
+station, species and identifier columns together when grouping the full dataset.
+
 ## Sensitivity and reporting
 
 ```{r sensitivity}
@@ -143,6 +150,9 @@ s <- independence_sensitivity(
 )
 head(s$overall)
 ```
+
+A positive `metadata_refractory` must not exceed the smallest threshold in the
+grid. To assess several settling windows, rerun the function for each value.
 
 At minimum, report:
 

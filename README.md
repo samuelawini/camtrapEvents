@@ -2,6 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21628401.svg)](https://doi.org/10.5281/zenodo.21628401)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![R-CMD-check](https://github.com/awsamu/camtrapEvents/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/awsamu/camtrapEvents/actions/workflows/R-CMD-check.yaml)
 
 **Metadata-aware independence filtering for camera-trap data**
 
@@ -21,8 +22,13 @@ sensitivity to the rule and threshold chosen.
 
 ```r
 # install.packages("remotes")
+# Install the current development version.
 remotes::install_github("awsamu/camtrapEvents")
+library(camtrapEvents)
 ```
+
+For exact reproduction of an archived release, add its tag. For example,
+`remotes::install_github("awsamu/camtrapEvents@v0.3.0")` installs version 0.3.0.
 
 ## Input contract
 
@@ -57,6 +63,8 @@ restored in the output.
 | `any_change` | any field differs from the preceding record | numeric or categorical |
 
 `time_only` is the safe default when metadata are absent or unreliable.
+For backward compatibility, supplying `metadata` while omitting `rule` selects
+`running_max`. Name the rule explicitly in reproducible analyses.
 
 `running_max` is the more conservative metadata rule. A fall from five visible
 animals to three, or a later return to five, does not open another event. A rise
@@ -98,16 +106,23 @@ The output distinguishes event classification from observed group size:
 
 - `independent` identifies retained event records.
 - `event_id` assigns every photograph to an event within station and species.
-- `burst_id` identifies the outer time-defined burst.
+- `burst_id` identifies the outer time-defined burst within station and species.
 - `count_increment` allocates increases in the maximum observed group size
   across events in a burst.
 - `n_new` is a compatibility alias for `count_increment` and is deprecated.
+
+The identifiers restart inside every station-species group. Use `station`,
+`species` and `event_id` or `burst_id` together when grouping the full dataset.
 
 `count_increment` prevents a split burst from duplicating the same observed
 maximum, but it is not an identity estimate. Animals can leave, re-enter, remain
 hidden, or be replaced by similar-looking individuals. Claims about distinct
 individuals require independent identity evidence such as unique markings,
 tags, or genetic identification.
+
+When all photograph rows are returned, `count_increment` is repeated on every
+row assigned to its event. Sum it only after retaining `independent == TRUE`, or
+call the function with `filter = TRUE`.
 
 ## Report sensitivity
 
@@ -129,6 +144,10 @@ s$overall
 s$by_species
 s$inflation
 ```
+
+A positive `metadata_refractory` must not exceed the smallest value in
+`thresholds`. To compare several settling windows, rerun the function for each
+value.
 
 The `inflation` table is a relative-change diagnostic, not proof that the
 additional events are correct. Large, species-specific differences show where
@@ -181,7 +200,7 @@ or Camera Trap Data Package observation tables.
 > Records were grouped by species and camera station. A new event was retained
 > after more than 30 minutes without a record, or when an age- or sex-class count
 > exceeded the maximum already observed in the current time burst
-> (`camtrapEvents` v0.3.0, `rule = "running_max"`,
+> (`camtrapEvents` v0.3.1, `rule = "running_max"`,
 > `compare_to = "last_record"`). Metadata-triggered events were not allowed
 > within two minutes of the previous retained event
 > (`metadata_refractory = 2`). Event totals under alternative thresholds and
@@ -199,8 +218,6 @@ used. Version 0.3.0 is archived at
 [`10.5281/zenodo.22010874`](https://doi.org/10.5281/zenodo.22010874).
 The earlier version 0.2.0 is archived at
 [`10.5281/zenodo.21639726`](https://doi.org/10.5281/zenodo.21639726).
-
-The current release is 0.3.0.
 
 The metadata-aware approach was first applied in:
 
