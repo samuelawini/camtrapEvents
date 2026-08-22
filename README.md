@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21628401.svg)](https://doi.org/10.5281/zenodo.21628401)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![R-CMD-check](https://github.com/awsamu/camtrapEvents/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/awsamu/camtrapEvents/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/samuelawini/camtrapEvents/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/samuelawini/camtrapEvents/actions/workflows/R-CMD-check.yaml)
 
 **Metadata-aware independence filtering for camera-trap data**
 
@@ -23,12 +23,12 @@ sensitivity to the rule and threshold chosen.
 ```r
 # install.packages("remotes")
 # Install the current development version.
-remotes::install_github("awsamu/camtrapEvents")
+remotes::install_github("samuelawini/camtrapEvents")
 library(camtrapEvents)
 ```
 
 For exact reproduction of an archived release, add its tag. For example,
-`remotes::install_github("awsamu/camtrapEvents@v0.3.1")` installs version 0.3.1.
+`remotes::install_github("samuelawini/camtrapEvents@v0.3.1")` installs version 0.3.1.
 
 ## Input contract
 

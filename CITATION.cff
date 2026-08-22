@@ -11,7 +11,7 @@ authors:
     given-names: Samuel
     orcid: https://orcid.org/0000-0003-0270-0345
     affiliation: University of Helsinki
-repository-code: https://github.com/awsamu/camtrapEvents
+repository-code: https://github.com/samuelawini/camtrapEvents
 url: https://doi.org/10.5281/zenodo.22056886
 license: MIT
 keywords:
@@ -31,4 +31,4 @@ preferred-citation:
   year: 2026
   version: 0.3.1
   doi: 10.5281/zenodo.22056886
-  repository-code: https://github.com/awsamu/camtrapEvents
+  repository-code: https://github.com/samuelawini/camtrapEvents

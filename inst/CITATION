@@ -12,7 +12,7 @@ bibentry(
   year     = 2026,
   note     = sprintf("R package version %s", meta$Version),
   doi      = package_doi,
-  url      = "https://github.com/awsamu/camtrapEvents",
+  url      = "https://github.com/samuelawini/camtrapEvents",
   textVersion = paste(
     "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
     sprintf("for Camera-Trap Data. R package version %s.", meta$Version),
