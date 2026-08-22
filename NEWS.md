@@ -1,3 +1,10 @@
+# camtrapEvents 0.3.2
+
+* Updates the canonical GitHub repository and citation links after the account
+  rename to `samuelawini`.
+* Keeps installation examples, badges, issue links, and archival metadata
+  aligned with the renamed repository. Filtering behaviour is unchanged.
+
 # camtrapEvents 0.3.1
 
 * Fixes `count_increment` when counts are missing in an early event but become

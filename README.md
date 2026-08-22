@@ -28,7 +28,7 @@ library(camtrapEvents)
 ```
 
 For exact reproduction of an archived release, add its tag. For example,
-`remotes::install_github("samuelawini/camtrapEvents@v0.3.1")` installs version 0.3.1.
+`remotes::install_github("samuelawini/camtrapEvents@v0.3.2")` installs version 0.3.2.
 
 ## Input contract
 
@@ -200,7 +200,7 @@ or Camera Trap Data Package observation tables.
 > Records were grouped by species and camera station. A new event was retained
 > after more than 30 minutes without a record, or when an age- or sex-class count
 > exceeded the maximum already observed in the current time burst
-> (`camtrapEvents` v0.3.1, `rule = "running_max"`,
+> (`camtrapEvents` v0.3.2, `rule = "running_max"`,
 > `compare_to = "last_record"`). Metadata-triggered events were not allowed
 > within two minutes of the previous retained event
 > (`metadata_refractory = 2`). Event totals under alternative thresholds and
