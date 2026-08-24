@@ -6,6 +6,11 @@
   undetected when `count` was supplied. Filtering results are unchanged: a call
   that used to succeed with an unrecognised `metadata` name now errors, because
   that name was being silently ignored.
+* Reports each distinct warning once across an `independence_sensitivity()`
+  grid, instead of repeating it for every configuration. The default grid runs
+  15 configurations and R does not print warnings inline past ten, so a warning
+  about the input was previously collapsed to `There were 15 warnings` with its
+  message text hidden.
 
 # camtrapEvents 0.3.2
 

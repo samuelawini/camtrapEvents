@@ -89,17 +89,34 @@ independence_sensitivity <- function(data,
   overall <- list()
   persp   <- list()
 
+  ## The grid calls independent_events() once per configuration, so a warning
+  ## about the input -- an unparseable date-time, say -- would otherwise be
+  ## repeated for every cell. Report each distinct warning once. Parsing the
+  ## date-time up front would not help: independent_events() warns on the count
+  ## of NA timestamps whether it parsed them or was handed POSIXct.
+  seen_warnings <- character(0)
+  warn_once <- function(expr) {
+    withCallingHandlers(expr, warning = function(w) {
+      msg <- conditionMessage(w)
+      if (msg %in% seen_warnings) {
+        invokeRestart("muffleWarning")
+      } else {
+        seen_warnings <<- c(seen_warnings, msg)
+      }
+    })
+  }
+
   for (rl in rules) {
     for (th in thresholds) {
 
-      flagged <- independent_events(
+      flagged <- warn_once(independent_events(
         data, datetime, station, species,
         threshold = th, rule = rl, metadata = metadata, count = count,
         record_id = record_id,
         min_increase = min_increase,
         metadata_refractory = metadata_refractory,
         compare_to = compare_to, format = format, tz = tz, filter = FALSE
-      )
+      ))
       kept <- flagged[flagged$independent, , drop = FALSE]
 
       overall[[length(overall) + 1L]] <- data.frame(
