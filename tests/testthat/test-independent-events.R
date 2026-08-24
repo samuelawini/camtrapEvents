@@ -410,3 +410,36 @@ test_that("event totals decrease monotonically as the threshold increases", {
                                 rules = "time_only")
   expect_false(is.unsorted(rev(s$overall$events)))
 })
+
+test_that("sum of count_increment does not depend on the rule", {
+  ## Requires a common size source: with `count` absent, time_only has no
+  ## metadata to fall back on and yields NA.
+  data(waterhole, package = "camtrapEvents")
+  dem <- c("males", "females", "juveniles")
+  for (th in c(0, 15, 30, 60, 120)) {
+    totals <- vapply(c("time_only", "running_max", "any_change"), function(r) {
+      ev <- independent_events(waterhole, "datetime", "station", "species",
+                               threshold = th, rule = r,
+                               metadata = if (r == "time_only") NULL else dem,
+                               count = "group_size", filter = TRUE)
+      sum(ev$count_increment)
+    }, numeric(1))
+    expect_false(anyNA(totals))
+    expect_equal(unname(totals), rep(totals[[1]], 3))
+  }
+})
+
+test_that("the shipped waterhole dataset matches its documentation", {
+  data(waterhole, package = "camtrapEvents")
+  expect_equal(dim(waterhole), c(4471L, 9L))
+  expect_named(waterhole, c("station", "species", "datetime", "males",
+                            "females", "juveniles", "group_size",
+                            "behaviour", "true_group"))
+  expect_s3_class(waterhole$datetime, "POSIXct")
+  expect_equal(length(unique(waterhole$true_group)), 670L)
+  expect_equal(length(unique(waterhole$station)), 3L)
+  expect_equal(length(unique(waterhole$species)), 4L)
+  expect_true(all(waterhole$group_size ==
+                    waterhole$males + waterhole$females + waterhole$juveniles))
+  expect_false(anyNA(waterhole))
+})

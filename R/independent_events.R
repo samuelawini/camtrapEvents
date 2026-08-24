@@ -440,36 +440,8 @@ independent_events <- function(data,
   ## records can be aggregated back onto their event.
   event <- cumsum(indep)
 
-  ## ------------------------------------------------------------------------
-  ## Observed count increment allocated to each event.
-  ##
-  ## A group of three animals passing together is ONE encounter containing
-  ## three individuals, not three encounters. But if a rule splits a burst,
-  ## naively taking the group size of each resulting event double-counts the
-  ## animals that were already recorded. The descriptive quantity returned here
-  ## is the increment:
-  ## how far the running maximum group size rose during this event relative to
-  ## where it stood when the event opened. Summing this over events recovers the
-  ## maximum observed count in the burst without duplicating a previously
-  ## observed maximum. It is not proof of individual identity.
-  ## ------------------------------------------------------------------------
-  count_increment_s <- rep(NA_real_, n)
-  if (!is.null(s_s)) {
-    starts <- which(indep)                    # events are consecutive runs, so
-    ends   <- c(starts[-1L] - 1L, n)          # each run ends before the next
-    ev_max     <- bmax[ends]
-    ev_burst   <- burst[starts]
-    prev_max   <- c(0, ev_max[-length(ev_max)])
-    prev_burst <- c(NA_integer_, ev_burst[-length(ev_burst)])
-    ## Only carry a known previous maximum forward within the same burst. If
-    ## the earlier event had no count, the first later observed count is the
-    ## first known maximum and is therefore measured from zero.
-    same_burst <- !is.na(prev_burst) & ev_burst == prev_burst
-    base <- rep(0, length(ev_max))
-    known_previous <- same_burst & !is.na(prev_max)
-    base[known_previous] <- prev_max[known_previous]
-    count_increment_s <- rep(ev_max - base, times = ends - starts + 1L)
-  }
+  count_increment_s <- .allocate_count_increment(indep, burst, bmax,
+                                                 has_size = !is.null(s_s))
 
   ## back to caller's row order
   out <- list(independent = logical(n), burst = integer(n),
@@ -479,4 +451,38 @@ independent_events <- function(data,
   out$event[ord]       <- event
   out$count_increment[ord] <- count_increment_s
   out
+}
+
+
+#' Internal: allocate the observed count increment to each event
+#'
+#' A group of three animals passing together is ONE encounter containing three
+#' individuals, not three encounters. But if a rule splits a burst, naively
+#' taking the group size of each resulting event double-counts the animals that
+#' were already recorded. The quantity returned here is the increment: how far
+#' the running maximum group size rose during this event relative to where it
+#' stood when the event opened. Summing this over events recovers the maximum
+#' observed count in the burst without duplicating a previously observed
+#' maximum. It is not proof of individual identity.
+#'
+#' @noRd
+.allocate_count_increment <- function(indep, burst, bmax, has_size) {
+
+  n <- length(indep)
+  if (!has_size) return(rep(NA_real_, n))
+
+  starts <- which(indep)                    # events are consecutive runs, so
+  ends   <- c(starts[-1L] - 1L, n)          # each run ends before the next
+  ev_max     <- bmax[ends]
+  ev_burst   <- burst[starts]
+  prev_max   <- c(0, ev_max[-length(ev_max)])
+  prev_burst <- c(NA_integer_, ev_burst[-length(ev_burst)])
+  ## Only carry a known previous maximum forward within the same burst. If the
+  ## earlier event had no count, the first later observed count is the first
+  ## known maximum and is therefore measured from zero.
+  same_burst <- !is.na(prev_burst) & ev_burst == prev_burst
+  base <- rep(0, length(ev_max))
+  known_previous <- same_burst & !is.na(prev_max)
+  base[known_previous] <- prev_max[known_previous]
+  rep(ev_max - base, times = ends - starts + 1L)
 }

@@ -18,6 +18,10 @@
 ##  Run with: source("data-raw/make_waterhole.R")
 ################################################################################
 
+## Pin the generator explicitly, not just the seed: R has changed defaults
+## before (the sample() algorithm in 3.6.0). Verified to reproduce the shipped
+## data/waterhole.rda byte-identically under R 4.6.1.
+RNGkind("Mersenne-Twister", "Inversion", "Rejection")
 set.seed(4242)
 
 GAP_LONG  <- 1182  # exponential mean in this educational generator
