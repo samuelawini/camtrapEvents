@@ -210,8 +210,7 @@ independent_events <- function(data,
          call. = FALSE)
   }
 
-  need <- c(datetime, station, species, record_id, count,
-            if (rule != "time_only") metadata)
+  need <- c(datetime, station, species, record_id, count, metadata)
   missing_cols <- setdiff(need, names(data))
   if (length(missing_cols)) {
     stop("Column(s) not found in `data`: ", paste(missing_cols, collapse = ", "),

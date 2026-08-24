@@ -195,6 +195,15 @@ test_that("informative errors are raised for bad input", {
   negative <- mk(c(0, 5), adults = c(1, -1))
   expect_error(flag(negative, threshold = 30, rule = "running_max",
                     metadata = "adults"), "non-negative")
+
+  ## `metadata` names are validated under every rule, including "time_only",
+  ## because the group-size fallback reads them whenever `count` is absent.
+  expect_error(flag(d, threshold = 30, rule = "time_only", metadata = "typo"),
+               "not found")
+  expect_error(independent_events(d, "datetime", "station", "species",
+                                  threshold = 30, rule = "time_only",
+                                  metadata = "typo", count = "adults"),
+               "not found")
 })
 
 test_that("record_id catches duplicate photograph-species annotations", {

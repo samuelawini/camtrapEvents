@@ -1,3 +1,12 @@
+# camtrapEvents (development version)
+
+* Validates `metadata` column names under every rule, including
+  `rule = "time_only"`. A name not present in `data` previously raised an
+  opaque `undefined columns selected` error when `count` was absent, and went
+  undetected when `count` was supplied. Filtering results are unchanged: a call
+  that used to succeed with an unrecognised `metadata` name now errors, because
+  that name was being silently ignored.
+
 # camtrapEvents 0.3.2
 
 * Updates the canonical GitHub repository and citation links after the account
