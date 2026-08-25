@@ -147,17 +147,15 @@ independence_sensitivity <- function(data,
   ## per-species inflation relative to the pure time rule
   inflation <- NULL
   if (!is.null(by_sp) && "time_only" %in% rules && length(rules) > 1L) {
-    base <- by_sp[by_sp$rule == "time_only",
-                  c("species", "threshold", "metadata_refractory", "events")]
-    names(base)[names(base) == "events"] <- "time_only"
-    inflation <- base
+    by_key <- c("species", "threshold", "metadata_refractory")
+    events_for <- function(rl) {
+      out <- by_sp[by_sp$rule == rl, c(by_key, "events")]
+      names(out)[names(out) == "events"] <- rl
+      out
+    }
+    inflation <- events_for("time_only")
     for (rl in setdiff(rules, "time_only")) {
-      add <- by_sp[by_sp$rule == rl,
-                   c("species", "threshold", "metadata_refractory", "events")]
-      names(add)[names(add) == "events"] <- rl
-      inflation <- merge(inflation, add,
-                         by = c("species", "threshold", "metadata_refractory"),
-                         all.x = TRUE)
+      inflation <- merge(inflation, events_for(rl), by = by_key, all.x = TRUE)
       inflation[[rl]][is.na(inflation[[rl]])] <- 0
       inflation[[paste0(rl, "_pct")]] <-
         round(100 * (inflation[[rl]] - inflation$time_only) /

@@ -252,12 +252,7 @@ independent_events <- function(data,
   }
 
   if (!is.null(record_id)) {
-    id_keys <- list(as.character(data[[station]]))
-    if (!is.null(species)) {
-      id_keys <- c(id_keys, list(as.character(data[[species]])))
-    }
-    id_keys <- c(id_keys, list(as.character(data[[record_id]])))
-    id_group <- do.call(paste, c(id_keys, sep = "\r"))
+    id_group <- .group_key(data, c(station, species, record_id))
     duplicate_id <- !is.na(data[[record_id]]) &
       (duplicated(id_group) | duplicated(id_group, fromLast = TRUE))
     if (any(duplicate_id)) {
@@ -326,17 +321,16 @@ independent_events <- function(data,
   ## Group size used to calculate the observed count increment. Prefer an
   ## explicit count column; otherwise fall back to the sum of numeric metadata.
   size <- tot
-  if (is.null(size) && length(metadata) &&
-      all(vapply(data[, metadata, drop = FALSE], is.numeric, logical(1)))) {
+  if (is.null(size) && length(metadata)) {
     size_data <- data[, metadata, drop = FALSE]
-    size <- rowSums(size_data, na.rm = TRUE)
-    size[rowSums(!is.na(size_data)) == 0L] <- NA_real_
+    if (all(vapply(size_data, is.numeric, logical(1)))) {
+      size <- rowSums(size_data, na.rm = TRUE)
+      size[rowSums(!is.na(size_data)) == 0L] <- NA_real_
+    }
   }
 
   ## --- grouping -------------------------------------------------------------
-  keys <- list(as.character(data[[station]]))
-  if (!is.null(species)) keys <- c(keys, list(as.character(data[[species]])))
-  grp <- do.call(paste, c(keys, sep = "\r"))
+  grp <- .group_key(data, c(station, species))
 
   independent <- logical(nrow(data))
   burst_id    <- integer(nrow(data))
@@ -370,6 +364,18 @@ independent_events <- function(data,
   data$n_new <- count_increment
 
   if (filter) data[data$independent, , drop = FALSE] else data
+}
+
+
+#' Internal: composite grouping key
+#'
+#' Independence is assessed within station and species, so rows are grouped by a
+#' single pasted key. \code{cols} may contain \code{NULL} entries, which
+#' \code{c()} drops, so an absent \code{species} needs no special case.
+#'
+#' @noRd
+.group_key <- function(data, cols) {
+  do.call(paste, c(lapply(cols, function(x) as.character(data[[x]])), sep = "\r"))
 }
 
 
