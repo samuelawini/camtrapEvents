@@ -19,9 +19,14 @@
 #' @param datetime Name of the date-time column. Either \code{POSIXct}, or
 #'   character parsed with \code{format}.
 #' @param station Name of the column identifying the camera or station.
-#'   Independence is assessed within station.
+#'   Independence is assessed within station. Missing, blank or whitespace-only
+#'   values raise a warning: such records share a group and are filtered against
+#'   each other.
 #' @param species Name of the species column. Independence is assessed within
-#'   species. Pass \code{NULL} to pool all species.
+#'   species. Pass \code{NULL} to pool all species. Missing, blank or
+#'   whitespace-only values raise a warning: such records share a group, so
+#'   distinct unidentified animals at one station may be merged into a single
+#'   event. Label them explicitly if that is not intended.
 #' @param record_id Optional name of a column uniquely identifying a photograph
 #'   or trigger. When supplied, duplicate identifiers within a station-species
 #'   group cause an error. This catches split annotation rows that would
@@ -219,6 +224,22 @@ independent_events <- function(data,
 
   if (rule != "time_only" && !length(metadata)) {
     stop("`rule = \"", rule, "\"` requires `metadata` column names.", call. = FALSE)
+  }
+
+  ## Independence is assessed within station and within species, so records with
+  ## a missing value in either column are grouped together and filtered against
+  ## each other. Report it and leave the data alone: distinct animals -- or
+  ## distinct cameras -- would otherwise be merged into one event silently.
+  for (col in c(station, species)) {
+    values <- as.character(data[[col]])
+    missing_value <- is.na(values) | !nzchar(trimws(values))
+    if (any(missing_value)) {
+      warning(sum(missing_value), " row(s) have a missing `", col,
+              "`. Independence is assessed within station and species, so ",
+              "these records are grouped together and filtered against each ",
+              "other. Label them explicitly (for example \"unidentified\") if ",
+              "that is not intended.", call. = FALSE)
+    }
   }
 
   if (!is.null(record_id)) {

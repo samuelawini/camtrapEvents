@@ -11,6 +11,11 @@
   15 configurations and R does not print warnings inline past ten, so a warning
   about the input was previously collapsed to `There were 15 warnings` with its
   message text hidden.
+* Warns when `station` or `species` contains missing, blank or whitespace-only
+  values, naming the column and the number of rows affected. Independence is
+  assessed within these columns, so such records share a group and are filtered
+  against each other, which can merge distinct animals into one event. Filtering
+  behaviour is unchanged; the condition was previously silent.
 
 # camtrapEvents 0.3.2
 

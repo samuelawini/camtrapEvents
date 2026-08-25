@@ -223,6 +223,40 @@ test_that("record_id catches duplicate photograph-species annotations", {
   ))
 })
 
+test_that("missing values in grouping columns are warned about", {
+  d <- mk(c(0, 5, 10), adults = 1)
+
+  na_species <- d; na_species$species[2] <- NA
+  expect_warning(out <- independent_events(na_species, "datetime", "station",
+                                           "species"),
+                 "missing `species`")
+  ## the condition is reported, the data is not altered
+  expect_equal(out$species, na_species$species)
+  expect_equal(out$independent,
+               suppressWarnings(independent_events(na_species, "datetime",
+                                                   "station",
+                                                   "species"))$independent)
+
+  blank_species <- d; blank_species$species[2] <- ""
+  expect_warning(independent_events(blank_species, "datetime", "station",
+                                    "species"), "missing `species`")
+
+  ws_species <- d; ws_species$species[2] <- "   "
+  expect_warning(independent_events(ws_species, "datetime", "station",
+                                    "species"), "missing `species`")
+
+  na_station <- d; na_station$station[2] <- NA
+  expect_warning(independent_events(na_station, "datetime", "station",
+                                    "species"), "missing `station`")
+
+  ## station is still checked when species is pooled with species = NULL
+  expect_warning(independent_events(na_station, "datetime", "station", NULL),
+                 "missing `station`")
+
+  ## clean data is silent
+  expect_silent(independent_events(d, "datetime", "station", "species"))
+})
+
 test_that("species = NULL pools all species", {
   d <- data.frame(station = "A", species = c("x", "y"),
                   datetime = as.POSIXct("2021-01-01", tz = "UTC") + c(0, 300),

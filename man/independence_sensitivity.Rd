@@ -31,10 +31,15 @@ photograph and species must be consolidated before filtering.}
 character parsed with \code{format}.}
 
 \item{station}{Name of the column identifying the camera or station.
-Independence is assessed within station.}
+Independence is assessed within station. Missing, blank or whitespace-only
+values raise a warning: such records share a group and are filtered against
+each other.}
 
 \item{species}{Name of the species column. Independence is assessed within
-species. Pass \code{NULL} to pool all species.}
+species. Pass \code{NULL} to pool all species. Missing, blank or
+whitespace-only values raise a warning: such records share a group, so
+distinct unidentified animals at one station may be merged into a single
+event. Label them explicitly if that is not intended.}
 
 \item{thresholds}{Numeric vector of thresholds in minutes.}
 
