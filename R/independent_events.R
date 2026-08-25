@@ -17,7 +17,10 @@
 #'   photograph-species detection. Multiple annotation rows for the same
 #'   photograph and species must be consolidated before filtering.
 #' @param datetime Name of the date-time column. Either \code{POSIXct}, or
-#'   character parsed with \code{format}.
+#'   character parsed with \code{format}. Records whose date-time cannot be
+#'   parsed are warned about, and each becomes its own burst and event carrying
+#'   its own \code{count_increment}. Drop or repair them beforehand if that is
+#'   not intended.
 #' @param station Name of the column identifying the camera or station.
 #'   Independence is assessed within station. Missing, blank or whitespace-only
 #'   values raise a warning: such records share a group and are filtered against
@@ -36,7 +39,10 @@
 #' @param rule How metadata is used inside the time window:
 #'   \describe{
 #'     \item{\code{"time_only"}}{Metadata ignored. The conventional fixed-threshold
-#'       filter, equivalent to \pkg{camtrapR}'s \code{minDeltaTime}.}
+#'       filter, corresponding to \pkg{camtrapR}'s \code{minDeltaTime}. The
+#'       boundary differs: a gap exactly equal to \code{threshold} does not open
+#'       an event here, whereas \pkg{camtrapR} treats a gap of exactly
+#'       \code{minDeltaTime} as independent.}
 #'     \item{\code{"any_change"}}{A record starts a new event if ANY column in
 #'       \code{metadata} differs from the preceding record. Works with numeric or
 #'       categorical metadata. This is the rule used in Awini et al. (2026).
@@ -80,9 +86,12 @@
 #'       or not. A burst ends only after \code{threshold} elapses with no records
 #'       at all. Default, and the behaviour of most published filters.}
 #'     \item{\code{"last_independent"}}{Gap measured from the last retained event,
-#'       subdividing long bursts at fixed intervals.}
+#'       subdividing long bursts. The subdivisions fall at fixed intervals only
+#'       under \code{rule = "time_only"}; under a metadata rule they do not,
+#'       because a metadata-triggered event also resets the reference point.}
 #'   }
-#'   Equivalent to \pkg{camtrapR}'s \code{deltaTimeComparedTo}.
+#'   Corresponds to \pkg{camtrapR}'s \code{deltaTimeComparedTo}
+#'   (\code{"lastRecord"} and \code{"lastIndependentRecord"}).
 #' @param format Format string used to parse \code{datetime} when it is character.
 #' @param tz Time zone used for parsing. Defaults to \code{"UTC"}.
 #' @param filter If \code{TRUE}, return only independent records. If \code{FALSE}
