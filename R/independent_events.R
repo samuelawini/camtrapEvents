@@ -17,11 +17,19 @@
 #'   photograph-species detection. Multiple annotation rows for the same
 #'   photograph and species must be consolidated before filtering.
 #' @param datetime Name of the date-time column. Either \code{POSIXct}, or
-#'   character parsed with \code{format}.
+#'   character parsed with \code{format}. Records whose date-time cannot be
+#'   parsed are warned about, and each becomes its own burst and event carrying
+#'   its own \code{count_increment}. Drop or repair them beforehand if that is
+#'   not intended.
 #' @param station Name of the column identifying the camera or station.
-#'   Independence is assessed within station.
+#'   Independence is assessed within station. Missing, blank or whitespace-only
+#'   values raise a warning: such records share a group and are filtered against
+#'   each other.
 #' @param species Name of the species column. Independence is assessed within
-#'   species. Pass \code{NULL} to pool all species.
+#'   species. Pass \code{NULL} to pool all species. Missing, blank or
+#'   whitespace-only values raise a warning: such records share a group, so
+#'   distinct unidentified animals at one station may be merged into a single
+#'   event. Label them explicitly if that is not intended.
 #' @param record_id Optional name of a column uniquely identifying a photograph
 #'   or trigger. When supplied, duplicate identifiers within a station-species
 #'   group cause an error. This catches split annotation rows that would
@@ -31,7 +39,10 @@
 #' @param rule How metadata is used inside the time window:
 #'   \describe{
 #'     \item{\code{"time_only"}}{Metadata ignored. The conventional fixed-threshold
-#'       filter, equivalent to \pkg{camtrapR}'s \code{minDeltaTime}.}
+#'       filter, corresponding to \pkg{camtrapR}'s \code{minDeltaTime}. The
+#'       boundary differs: a gap exactly equal to \code{threshold} does not open
+#'       an event here, whereas \pkg{camtrapR} treats a gap of exactly
+#'       \code{minDeltaTime} as independent.}
 #'     \item{\code{"any_change"}}{A record starts a new event if ANY column in
 #'       \code{metadata} differs from the preceding record. Works with numeric or
 #'       categorical metadata. This is the rule used in Awini et al. (2026).
@@ -75,9 +86,12 @@
 #'       or not. A burst ends only after \code{threshold} elapses with no records
 #'       at all. Default, and the behaviour of most published filters.}
 #'     \item{\code{"last_independent"}}{Gap measured from the last retained event,
-#'       subdividing long bursts at fixed intervals.}
+#'       subdividing long bursts. The subdivisions fall at fixed intervals only
+#'       under \code{rule = "time_only"}; under a metadata rule they do not,
+#'       because a metadata-triggered event also resets the reference point.}
 #'   }
-#'   Equivalent to \pkg{camtrapR}'s \code{deltaTimeComparedTo}.
+#'   Corresponds to \pkg{camtrapR}'s \code{deltaTimeComparedTo}
+#'   (\code{"lastRecord"} and \code{"lastIndependentRecord"}).
 #' @param format Format string used to parse \code{datetime} when it is character.
 #' @param tz Time zone used for parsing. Defaults to \code{"UTC"}.
 #' @param filter If \code{TRUE}, return only independent records. If \code{FALSE}
@@ -210,8 +224,7 @@ independent_events <- function(data,
          call. = FALSE)
   }
 
-  need <- c(datetime, station, species, record_id, count,
-            if (rule != "time_only") metadata)
+  need <- c(datetime, station, species, record_id, count, metadata)
   missing_cols <- setdiff(need, names(data))
   if (length(missing_cols)) {
     stop("Column(s) not found in `data`: ", paste(missing_cols, collapse = ", "),
@@ -222,13 +235,24 @@ independent_events <- function(data,
     stop("`rule = \"", rule, "\"` requires `metadata` column names.", call. = FALSE)
   }
 
-  if (!is.null(record_id)) {
-    id_keys <- list(as.character(data[[station]]))
-    if (!is.null(species)) {
-      id_keys <- c(id_keys, list(as.character(data[[species]])))
+  ## Independence is assessed within station and within species, so records with
+  ## a missing value in either column are grouped together and filtered against
+  ## each other. Report it and leave the data alone: distinct animals -- or
+  ## distinct cameras -- would otherwise be merged into one event silently.
+  for (col in c(station, species)) {
+    values <- as.character(data[[col]])
+    missing_value <- is.na(values) | !nzchar(trimws(values))
+    if (any(missing_value)) {
+      warning(sum(missing_value), " row(s) have a missing `", col,
+              "`. Independence is assessed within station and species, so ",
+              "these records are grouped together and filtered against each ",
+              "other. Label them explicitly (for example \"unidentified\") if ",
+              "that is not intended.", call. = FALSE)
     }
-    id_keys <- c(id_keys, list(as.character(data[[record_id]])))
-    id_group <- do.call(paste, c(id_keys, sep = "\r"))
+  }
+
+  if (!is.null(record_id)) {
+    id_group <- .group_key(data, c(station, species, record_id))
     duplicate_id <- !is.na(data[[record_id]]) &
       (duplicated(id_group) | duplicated(id_group, fromLast = TRUE))
     if (any(duplicate_id)) {
@@ -297,17 +321,16 @@ independent_events <- function(data,
   ## Group size used to calculate the observed count increment. Prefer an
   ## explicit count column; otherwise fall back to the sum of numeric metadata.
   size <- tot
-  if (is.null(size) && length(metadata) &&
-      all(vapply(data[, metadata, drop = FALSE], is.numeric, logical(1)))) {
+  if (is.null(size) && length(metadata)) {
     size_data <- data[, metadata, drop = FALSE]
-    size <- rowSums(size_data, na.rm = TRUE)
-    size[rowSums(!is.na(size_data)) == 0L] <- NA_real_
+    if (all(vapply(size_data, is.numeric, logical(1)))) {
+      size <- rowSums(size_data, na.rm = TRUE)
+      size[rowSums(!is.na(size_data)) == 0L] <- NA_real_
+    }
   }
 
   ## --- grouping -------------------------------------------------------------
-  keys <- list(as.character(data[[station]]))
-  if (!is.null(species)) keys <- c(keys, list(as.character(data[[species]])))
-  grp <- do.call(paste, c(keys, sep = "\r"))
+  grp <- .group_key(data, c(station, species))
 
   independent <- logical(nrow(data))
   burst_id    <- integer(nrow(data))
@@ -341,6 +364,18 @@ independent_events <- function(data,
   data$n_new <- count_increment
 
   if (filter) data[data$independent, , drop = FALSE] else data
+}
+
+
+#' Internal: composite grouping key
+#'
+#' Independence is assessed within station and species, so rows are grouped by a
+#' single pasted key. \code{cols} may contain \code{NULL} entries, which
+#' \code{c()} drops, so an absent \code{species} needs no special case.
+#'
+#' @noRd
+.group_key <- function(data, cols) {
+  do.call(paste, c(lapply(cols, function(x) as.character(data[[x]])), sep = "\r"))
 }
 
 
@@ -441,36 +476,8 @@ independent_events <- function(data,
   ## records can be aggregated back onto their event.
   event <- cumsum(indep)
 
-  ## ------------------------------------------------------------------------
-  ## Observed count increment allocated to each event.
-  ##
-  ## A group of three animals passing together is ONE encounter containing
-  ## three individuals, not three encounters. But if a rule splits a burst,
-  ## naively taking the group size of each resulting event double-counts the
-  ## animals that were already recorded. The descriptive quantity returned here
-  ## is the increment:
-  ## how far the running maximum group size rose during this event relative to
-  ## where it stood when the event opened. Summing this over events recovers the
-  ## maximum observed count in the burst without duplicating a previously
-  ## observed maximum. It is not proof of individual identity.
-  ## ------------------------------------------------------------------------
-  count_increment_s <- rep(NA_real_, n)
-  if (!is.null(s_s)) {
-    starts <- which(indep)                    # events are consecutive runs, so
-    ends   <- c(starts[-1L] - 1L, n)          # each run ends before the next
-    ev_max     <- bmax[ends]
-    ev_burst   <- burst[starts]
-    prev_max   <- c(0, ev_max[-length(ev_max)])
-    prev_burst <- c(NA_integer_, ev_burst[-length(ev_burst)])
-    ## Only carry a known previous maximum forward within the same burst. If
-    ## the earlier event had no count, the first later observed count is the
-    ## first known maximum and is therefore measured from zero.
-    same_burst <- !is.na(prev_burst) & ev_burst == prev_burst
-    base <- rep(0, length(ev_max))
-    known_previous <- same_burst & !is.na(prev_max)
-    base[known_previous] <- prev_max[known_previous]
-    count_increment_s <- rep(ev_max - base, times = ends - starts + 1L)
-  }
+  count_increment_s <- .allocate_count_increment(indep, burst, bmax,
+                                                 has_size = !is.null(s_s))
 
   ## back to caller's row order
   out <- list(independent = logical(n), burst = integer(n),
@@ -480,4 +487,38 @@ independent_events <- function(data,
   out$event[ord]       <- event
   out$count_increment[ord] <- count_increment_s
   out
+}
+
+
+#' Internal: allocate the observed count increment to each event
+#'
+#' A group of three animals passing together is ONE encounter containing three
+#' individuals, not three encounters. But if a rule splits a burst, naively
+#' taking the group size of each resulting event double-counts the animals that
+#' were already recorded. The quantity returned here is the increment: how far
+#' the running maximum group size rose during this event relative to where it
+#' stood when the event opened. Summing this over events recovers the maximum
+#' observed count in the burst without duplicating a previously observed
+#' maximum. It is not proof of individual identity.
+#'
+#' @noRd
+.allocate_count_increment <- function(indep, burst, bmax, has_size) {
+
+  n <- length(indep)
+  if (!has_size) return(rep(NA_real_, n))
+
+  starts <- which(indep)                    # events are consecutive runs, so
+  ends   <- c(starts[-1L] - 1L, n)          # each run ends before the next
+  ev_max     <- bmax[ends]
+  ev_burst   <- burst[starts]
+  prev_max   <- c(0, ev_max[-length(ev_max)])
+  prev_burst <- c(NA_integer_, ev_burst[-length(ev_burst)])
+  ## Only carry a known previous maximum forward within the same burst. If the
+  ## earlier event had no count, the first later observed count is the first
+  ## known maximum and is therefore measured from zero.
+  same_burst <- !is.na(prev_burst) & ev_burst == prev_burst
+  base <- rep(0, length(ev_max))
+  known_previous <- same_burst & !is.na(prev_max)
+  base[known_previous] <- prev_max[known_previous]
+  rep(ev_max - base, times = ends - starts + 1L)
 }

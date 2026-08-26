@@ -1,3 +1,37 @@
+# camtrapEvents (development version)
+
+* Validates `metadata` column names under every rule, including
+  `rule = "time_only"`. A name not present in `data` previously raised an
+  opaque `undefined columns selected` error when `count` was absent, and went
+  undetected when `count` was supplied. Filtering results are unchanged: a call
+  that used to succeed with an unrecognised `metadata` name now errors, because
+  that name was being silently ignored.
+* Reports each distinct warning once across an `independence_sensitivity()`
+  grid, instead of repeating it for every configuration. The default grid runs
+  15 configurations and R does not print warnings inline past ten, so a warning
+  about the input was previously collapsed to `There were 15 warnings` with its
+  message text hidden.
+* Warns when `station` or `species` contains missing, blank or whitespace-only
+  values, naming the column and the number of rows affected. Independence is
+  assessed within these columns, so such records share a group and are filtered
+  against each other, which can merge distinct animals into one event. Filtering
+  behaviour is unchanged; the condition was previously silent.
+* Corrects the documented relationship to camtrapR. `rule = "time_only"` was
+  described as equivalent to `minDeltaTime`, but the two differ at the
+  boundary: camtrapR starts a new event when the gap is exactly
+  `minDeltaTime`, while this package requires a gap strictly greater than
+  `threshold`. Three records spaced exactly 30 minutes apart give three events
+  in camtrapR and one here. Filtering behaviour is unchanged; only the
+  description was wrong.
+* Clarifies `compare_to = "last_independent"`. It subdivides a long burst at
+  fixed intervals only under `rule = "time_only"`. With a metadata rule the
+  spacing is irregular, because a metadata-triggered event also resets the
+  reference point.
+* Documents that a record whose date-time cannot be parsed becomes its own
+  burst and event, carrying its own `count_increment`. A single unreadable
+  timestamp therefore adds to both the event total and the observed count
+  total.
+
 # camtrapEvents 0.3.2
 
 * Updates the canonical GitHub repository and citation links after the account

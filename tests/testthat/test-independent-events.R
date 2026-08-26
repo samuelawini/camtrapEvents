@@ -195,6 +195,15 @@ test_that("informative errors are raised for bad input", {
   negative <- mk(c(0, 5), adults = c(1, -1))
   expect_error(flag(negative, threshold = 30, rule = "running_max",
                     metadata = "adults"), "non-negative")
+
+  ## `metadata` names are validated under every rule, including "time_only",
+  ## because the group-size fallback reads them whenever `count` is absent.
+  expect_error(flag(d, threshold = 30, rule = "time_only", metadata = "typo"),
+               "not found")
+  expect_error(independent_events(d, "datetime", "station", "species",
+                                  threshold = 30, rule = "time_only",
+                                  metadata = "typo", count = "adults"),
+               "not found")
 })
 
 test_that("record_id catches duplicate photograph-species annotations", {
@@ -212,6 +221,40 @@ test_that("record_id catches duplicate photograph-species annotations", {
     d, "datetime", "station", "species", threshold = 30,
     rule = "time_only", record_id = "photo_id"
   ))
+})
+
+test_that("missing values in grouping columns are warned about", {
+  d <- mk(c(0, 5, 10), adults = 1)
+
+  na_species <- d; na_species$species[2] <- NA
+  expect_warning(out <- independent_events(na_species, "datetime", "station",
+                                           "species"),
+                 "missing `species`")
+  ## the condition is reported, the data is not altered
+  expect_equal(out$species, na_species$species)
+  expect_equal(out$independent,
+               suppressWarnings(independent_events(na_species, "datetime",
+                                                   "station",
+                                                   "species"))$independent)
+
+  blank_species <- d; blank_species$species[2] <- ""
+  expect_warning(independent_events(blank_species, "datetime", "station",
+                                    "species"), "missing `species`")
+
+  ws_species <- d; ws_species$species[2] <- "   "
+  expect_warning(independent_events(ws_species, "datetime", "station",
+                                    "species"), "missing `species`")
+
+  na_station <- d; na_station$station[2] <- NA
+  expect_warning(independent_events(na_station, "datetime", "station",
+                                    "species"), "missing `station`")
+
+  ## station is still checked when species is pooled with species = NULL
+  expect_warning(independent_events(na_station, "datetime", "station", NULL),
+                 "missing `station`")
+
+  ## clean data is silent
+  expect_silent(independent_events(d, "datetime", "station", "species"))
 })
 
 test_that("species = NULL pools all species", {
@@ -400,4 +443,37 @@ test_that("event totals decrease monotonically as the threshold increases", {
                                 thresholds = c(0, 15, 30, 60, 120),
                                 rules = "time_only")
   expect_false(is.unsorted(rev(s$overall$events)))
+})
+
+test_that("sum of count_increment does not depend on the rule", {
+  ## Requires a common size source: with `count` absent, time_only has no
+  ## metadata to fall back on and yields NA.
+  data(waterhole, package = "camtrapEvents")
+  dem <- c("males", "females", "juveniles")
+  for (th in c(0, 15, 30, 60, 120)) {
+    totals <- vapply(c("time_only", "running_max", "any_change"), function(r) {
+      ev <- independent_events(waterhole, "datetime", "station", "species",
+                               threshold = th, rule = r,
+                               metadata = if (r == "time_only") NULL else dem,
+                               count = "group_size", filter = TRUE)
+      sum(ev$count_increment)
+    }, numeric(1))
+    expect_false(anyNA(totals))
+    expect_equal(unname(totals), rep(totals[[1]], 3))
+  }
+})
+
+test_that("the shipped waterhole dataset matches its documentation", {
+  data(waterhole, package = "camtrapEvents")
+  expect_equal(dim(waterhole), c(4471L, 9L))
+  expect_named(waterhole, c("station", "species", "datetime", "males",
+                            "females", "juveniles", "group_size",
+                            "behaviour", "true_group"))
+  expect_s3_class(waterhole$datetime, "POSIXct")
+  expect_equal(length(unique(waterhole$true_group)), 670L)
+  expect_equal(length(unique(waterhole$station)), 3L)
+  expect_equal(length(unique(waterhole$species)), 4L)
+  expect_true(all(waterhole$group_size ==
+                    waterhole$males + waterhole$females + waterhole$juveniles))
+  expect_false(anyNA(waterhole))
 })

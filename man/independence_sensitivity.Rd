@@ -28,13 +28,21 @@ photograph-species detection. Multiple annotation rows for the same
 photograph and species must be consolidated before filtering.}
 
 \item{datetime}{Name of the date-time column. Either \code{POSIXct}, or
-character parsed with \code{format}.}
+character parsed with \code{format}. Records whose date-time cannot be
+parsed are warned about, and each becomes its own burst and event carrying
+its own \code{count_increment}. Drop or repair them beforehand if that is
+not intended.}
 
 \item{station}{Name of the column identifying the camera or station.
-Independence is assessed within station.}
+Independence is assessed within station. Missing, blank or whitespace-only
+values raise a warning: such records share a group and are filtered against
+each other.}
 
 \item{species}{Name of the species column. Independence is assessed within
-species. Pass \code{NULL} to pool all species.}
+species. Pass \code{NULL} to pool all species. Missing, blank or
+whitespace-only values raise a warning: such records share a group, so
+distinct unidentified animals at one station may be merged into a single
+event. Label them explicitly if that is not intended.}
 
 \item{thresholds}{Numeric vector of thresholds in minutes.}
 
@@ -57,9 +65,12 @@ for \code{count_increment}.}
     or not. A burst ends only after \code{threshold} elapses with no records
     at all. Default, and the behaviour of most published filters.}
   \item{\code{"last_independent"}}{Gap measured from the last retained event,
-    subdividing long bursts at fixed intervals.}
+    subdividing long bursts. The subdivisions fall at fixed intervals only
+    under \code{rule = "time_only"}; under a metadata rule they do not,
+    because a metadata-triggered event also resets the reference point.}
 }
-Equivalent to \pkg{camtrapR}'s \code{deltaTimeComparedTo}.}
+Corresponds to \pkg{camtrapR}'s \code{deltaTimeComparedTo}
+(\code{"lastRecord"} and \code{"lastIndependentRecord"}).}
 
 \item{format}{Format string used to parse \code{datetime} when it is character.}
 
