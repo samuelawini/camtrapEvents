@@ -1,6 +1,6 @@
 Package: camtrapEvents
 Title: Metadata-Aware Independence Filtering for Camera-Trap Data
-Version: 0.3.2
+Version: 0.3.3
 Authors@R:
     person("Samuel", "Awini", email = "winsamuel@hotmail.com",
            role = c("aut", "cre"),

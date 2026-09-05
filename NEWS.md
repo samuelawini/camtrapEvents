@@ -1,4 +1,13 @@
-# camtrapEvents (development version)
+# camtrapEvents 0.3.3 (unreleased candidate)
+
+* Keeps distinct station/species and record-identifier tuples separate when
+  labels contain the internal separator or a literal `"NA"` label occurs
+  alongside missing values.
+* Includes missing species labels in sensitivity totals and inflation tables,
+  and evaluates repeated thresholds and rules only once. Inflation joins keep
+  missing labels distinct from literal labels.
+* Rejects infinite observed counts and invalid numeric metadata used as
+  fallback group size, preventing negative or non-finite count increments.
 
 * Validates `metadata` column names under every rule, including
   `rule = "time_only"`. A name not present in `data` previously raised an

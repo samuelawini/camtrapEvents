@@ -6,6 +6,14 @@
 
 **Metadata-aware independence filtering for camera-trap data**
 
+This checkout is the unreleased local v0.3.3 candidate. It has no version DOI.
+The existing v0.3.2 archive remains a separate, published version. Install the
+candidate's exact built source archive for its reproducibility evaluation:
+
+```r
+install.packages("camtrapEvents_0.3.3.tar.gz", repos = NULL, type = "source")
+```
+
 Camera traps often produce many photographs of the same animal or group.
 Analysts usually collapse these records with a fixed time threshold: another
 record of the same species at the same station starts a new event only after

@@ -2,21 +2,18 @@ citHeader("To cite camtrapEvents, cite the software record below. If you also
 discuss the study in which the metadata-aware approach was first applied, cite
 the Oryx article as well.")
 
-package_doi <- "10.5281/zenodo.22062900"
-
 bibentry(
   bibtype  = "Manual",
   title    = "camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data",
   author   = person("Samuel", "Awini",
                     comment = c(ORCID = "0000-0003-0270-0345")),
   year     = 2026,
-  note     = sprintf("R package version %s", meta$Version),
-  doi      = package_doi,
+  note     = sprintf("R package version %s (unreleased local candidate)", meta$Version),
   url      = "https://github.com/samuelawini/camtrapEvents",
   textVersion = paste(
     "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
-    sprintf("for Camera-Trap Data. R package version %s.", meta$Version),
-    sprintf("doi:%s", package_doi)
+    sprintf("for Camera-Trap Data. R package version %s (unreleased local candidate).", meta$Version),
+    "https://github.com/samuelawini/camtrapEvents"
   )
 )
 
