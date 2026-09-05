@@ -8,12 +8,12 @@ bibentry(
   author   = person("Samuel", "Awini",
                     comment = c(ORCID = "0000-0003-0270-0345")),
   year     = 2026,
-  note     = sprintf("R package version %s (unreleased local candidate)", meta$Version),
-  url      = "https://github.com/samuelawini/camtrapEvents",
+  note     = sprintf("R package version %s", meta$Version),
+  url      = "https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3",
   textVersion = paste(
     "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
-    sprintf("for Camera-Trap Data. R package version %s (unreleased local candidate).", meta$Version),
-    "https://github.com/samuelawini/camtrapEvents"
+    sprintf("for Camera-Trap Data. R package version %s.", meta$Version),
+    "https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3"
   )
 )
 

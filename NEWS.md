@@ -1,4 +1,4 @@
-# camtrapEvents 0.3.3 (unreleased candidate)
+# camtrapEvents 0.3.3
 
 * Keeps distinct station/species and record-identifier tuples separate when
   labels contain the internal separator or a literal `"NA"` label occurs
