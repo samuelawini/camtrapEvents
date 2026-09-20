@@ -76,16 +76,19 @@ the shorthand used in package versions up to 0.2.0.}
 by \code{rule}. Ignored for event classification when
 \code{rule = "time_only"}. If \code{count} is absent and every metadata
 column is numeric, their row sum is still used as the fallback group size
-for \code{count_increment}.}
+for \code{count_increment}. Numeric metadata used by \code{"running_max"}
+or as fallback group size must be finite and non-negative when observed;
+missing values are allowed.}
 
 \item{count}{Optional name of a total group-size column, used by
 \code{"running_max"} in addition to \code{metadata}, and used to compute
 \code{count_increment}. If absent, group size falls back to the sum of numeric
-\code{metadata}.}
+\code{metadata}. Observed counts must be finite and non-negative;
+missing values are allowed.}
 
 \item{min_increase}{How far a count must exceed the running maximum before it
 is treated as evidence for a new event under \code{"running_max"}. The
-default of 1 accepts any increase. Raise it where tagging is noisy: a rise
+default of 1 accepts increases of at least one. Raise it where tagging is noisy: a rise
 from 3 to 4 animals is exactly what a miscount looks like, whereas a rise
 from 3 to 7 is not. Ignored by the other rules.}
 
@@ -118,7 +121,8 @@ otherwise be mistaken for separate detections.}
 this period after the last retained event, metadata may update the running
 maxima but cannot itself open another event. A gap beyond \code{threshold}
 still opens an event. The default, 0, preserves the single-threshold
-behaviour. Positive values provide the two-time-scale filter discussed in
+behaviour, including metadata-triggered events at tied timestamps.
+Positive values provide the two-time-scale filter discussed in
 the package vignette and must not exceed \code{threshold}.}
 }
 \value{

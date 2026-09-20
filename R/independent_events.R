@@ -64,21 +64,25 @@
 #'   by \code{rule}. Ignored for event classification when
 #'   \code{rule = "time_only"}. If \code{count} is absent and every metadata
 #'   column is numeric, their row sum is still used as the fallback group size
-#'   for \code{count_increment}.
+#'   for \code{count_increment}. Numeric metadata used by \code{"running_max"}
+#'   or as fallback group size must be finite and non-negative when observed;
+#'   missing values are allowed.
 #' @param count Optional name of a total group-size column, used by
 #'   \code{"running_max"} in addition to \code{metadata}, and used to compute
 #'   \code{count_increment}. If absent, group size falls back to the sum of numeric
-#'   \code{metadata}.
+#'   \code{metadata}. Observed counts must be finite and non-negative;
+#'   missing values are allowed.
 #' @param min_increase How far a count must exceed the running maximum before it
 #'   is treated as evidence for a new event under \code{"running_max"}. The
-#'   default of 1 accepts any increase. Raise it where tagging is noisy: a rise
+#'   default of 1 accepts increases of at least one. Raise it where tagging is noisy: a rise
 #'   from 3 to 4 animals is exactly what a miscount looks like, whereas a rise
 #'   from 3 to 7 is not. Ignored by the other rules.
 #' @param metadata_refractory Optional short settling window in minutes. Within
 #'   this period after the last retained event, metadata may update the running
 #'   maxima but cannot itself open another event. A gap beyond \code{threshold}
 #'   still opens an event. The default, 0, preserves the single-threshold
-#'   behaviour. Positive values provide the two-time-scale filter discussed in
+#'   behaviour, including metadata-triggered events at tied timestamps.
+#'   Positive values provide the two-time-scale filter discussed in
 #'   the package vignette and must not exceed \code{threshold}.
 #' @param compare_to Reference point for the time gap:
 #'   \describe{
@@ -297,6 +301,9 @@ independent_events <- function(data,
       if (any(as.matrix(meta) < 0, na.rm = TRUE)) {
         stop("Numeric `metadata` counts must be non-negative.", call. = FALSE)
       }
+      if (any(is.infinite(as.matrix(meta)))) {
+        stop("Observed numeric `metadata` counts must be finite.", call. = FALSE)
+      }
       meta <- as.matrix(meta)
       storage.mode(meta) <- "numeric"
     } else {
@@ -316,6 +323,9 @@ independent_events <- function(data,
     if (any(tot < 0, na.rm = TRUE)) {
       stop("`count` values must be non-negative.", call. = FALSE)
     }
+    if (any(is.infinite(tot))) {
+      stop("Observed `count` values must be finite.", call. = FALSE)
+    }
   }
 
   ## Group size used to calculate the observed count increment. Prefer an
@@ -324,7 +334,19 @@ independent_events <- function(data,
   if (is.null(size) && length(metadata)) {
     size_data <- data[, metadata, drop = FALSE]
     if (all(vapply(size_data, is.numeric, logical(1)))) {
+      if (any(as.matrix(size_data) < 0, na.rm = TRUE)) {
+        stop("Numeric `metadata` used as group size must be non-negative.",
+             call. = FALSE)
+      }
+      if (any(is.infinite(as.matrix(size_data)))) {
+        stop("Observed numeric `metadata` used as group size must be finite.",
+             call. = FALSE)
+      }
       size <- rowSums(size_data, na.rm = TRUE)
+      if (any(is.infinite(size))) {
+        stop("The sum of numeric `metadata` used as group size must be finite.",
+             call. = FALSE)
+      }
       size[rowSums(!is.na(size_data)) == 0L] <- NA_real_
     }
   }
@@ -370,12 +392,18 @@ independent_events <- function(data,
 #' Internal: composite grouping key
 #'
 #' Independence is assessed within station and species, so rows are grouped by a
-#' single pasted key. \code{cols} may contain \code{NULL} entries, which
+#' key made from integer codes for distinct values in each column. This keeps
+#' missing values distinct from literal labels and avoids delimiter collisions.
+#' \code{cols} may contain \code{NULL} entries, which
 #' \code{c()} drops, so an absent \code{species} needs no special case.
 #'
 #' @noRd
 .group_key <- function(data, cols) {
-  do.call(paste, c(lapply(cols, function(x) as.character(data[[x]])), sep = "\r"))
+  codes <- lapply(cols, function(x) {
+    values <- as.character(data[[x]])
+    match(values, unique(values))
+  })
+  do.call(paste, c(codes, sep = "\r"))
 }
 
 

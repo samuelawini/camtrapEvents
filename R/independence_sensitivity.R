@@ -12,8 +12,10 @@
 #' accurate.
 #'
 #' @inheritParams independent_events
-#' @param thresholds Numeric vector of thresholds in minutes.
-#' @param rules Character vector of rules to compare.
+#' @param thresholds Numeric vector of thresholds in minutes. Repeated values
+#'   are evaluated once, in the order of their first appearance.
+#' @param rules Character vector of rules to compare. Repeated rules are
+#'   evaluated once, in the order of their first appearance.
 #' @param by_species If \code{TRUE}, also return counts per species.
 #' @param metadata_refractory A single settling-window value in minutes, applied
 #'   to every configuration. It must not exceed the smallest value in
@@ -25,7 +27,8 @@
 #'     \item{\code{overall}}{data frame: rule, threshold,
 #'       metadata_refractory, records, events and pct_retained}
 #'     \item{\code{by_species}}{data frame of per-species event counts with rule,
-#'       threshold and metadata_refractory, or \code{NULL}}
+#'       threshold and metadata_refractory, including an \code{NA} species
+#'       category when present, or \code{NULL}}
 #'     \item{\code{inflation}}{per-species percentage increase of each rule over
 #'       \code{"time_only"} at the same threshold, or \code{NULL} if
 #'       \code{"time_only"} was not among \code{rules}}
@@ -69,6 +72,7 @@ independence_sensitivity <- function(data,
   if (missing(rules) && !length(metadata)) rules <- "time_only"
   rules <- match.arg(rules, c("time_only", "running_max", "any_change"),
                      several.ok = TRUE)
+  rules <- unique(rules)
   if (by_species && is.null(species)) by_species <- FALSE
 
   if (!is.numeric(thresholds) || !length(thresholds) || anyNA(thresholds) ||
@@ -76,6 +80,7 @@ independence_sensitivity <- function(data,
     stop("`thresholds` must be a non-empty numeric vector of non-negative minutes.",
          call. = FALSE)
   }
+  thresholds <- unique(thresholds)
   if (!is.numeric(metadata_refractory) || length(metadata_refractory) != 1L ||
       is.na(metadata_refractory) || metadata_refractory < 0) {
     stop("`metadata_refractory` must be a single non-negative number of minutes.",
@@ -130,7 +135,7 @@ independence_sensitivity <- function(data,
       )
 
       if (by_species) {
-        tab <- as.data.frame(table(species = kept[[species]]),
+        tab <- as.data.frame(table(species = kept[[species]], useNA = "ifany"),
                              stringsAsFactors = FALSE)
         names(tab) <- c("species", "events")
         tab$rule      <- rl
@@ -148,19 +153,24 @@ independence_sensitivity <- function(data,
   inflation <- NULL
   if (!is.null(by_sp) && "time_only" %in% rules && length(rules) > 1L) {
     by_key <- c("species", "threshold", "metadata_refractory")
+    configuration_key <- .group_key(by_sp, by_key)
     events_for <- function(rl) {
       out <- by_sp[by_sp$rule == rl, c(by_key, "events")]
       names(out)[names(out) == "events"] <- rl
+      out$.configuration_key <- configuration_key[by_sp$rule == rl]
       out
     }
     inflation <- events_for("time_only")
     for (rl in setdiff(rules, "time_only")) {
-      inflation <- merge(inflation, events_for(rl), by = by_key, all.x = TRUE)
+      candidate <- events_for(rl)[c(".configuration_key", rl)]
+      inflation <- merge(inflation, candidate, by = ".configuration_key",
+                         all.x = TRUE)
       inflation[[rl]][is.na(inflation[[rl]])] <- 0
       inflation[[paste0(rl, "_pct")]] <-
         round(100 * (inflation[[rl]] - inflation$time_only) /
                 pmax(inflation$time_only, 1), 1)
     }
+    inflation$.configuration_key <- NULL
     inflation <- inflation[order(inflation$threshold, -inflation$time_only), ]
     rownames(inflation) <- NULL
   }

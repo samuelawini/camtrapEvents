@@ -6,6 +6,16 @@
 
 **Metadata-aware independence filtering for camera-trap data**
 
+This source tree identifies version 0.3.3. For reproducible analyses, use the
+exact versioned source archive rather than an unpinned development checkout:
+
+```r
+install.packages("camtrapEvents_0.3.3.tar.gz", repos = NULL, type = "source")
+```
+
+Published versions and their version-specific Zenodo DOIs are listed on the
+[GitHub releases page](https://github.com/samuelawini/camtrapEvents/releases).
+
 Camera traps often produce many photographs of the same animal or group.
 Analysts usually collapse these records with a fixed time threshold: another
 record of the same species at the same station starts a new event only after
@@ -27,8 +37,9 @@ remotes::install_github("samuelawini/camtrapEvents")
 library(camtrapEvents)
 ```
 
-For exact reproduction of an archived release, add its tag. For example,
-`remotes::install_github("samuelawini/camtrapEvents@v0.3.2")` installs version 0.3.2.
+For exact reproduction of an archived release, add its published tag. For example,
+`remotes::install_github("samuelawini/camtrapEvents@v0.3.2")` installs the historical
+version 0.3.2. Use the version reported by the analysis you are reproducing.
 
 ## Input contract
 

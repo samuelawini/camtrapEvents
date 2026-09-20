@@ -1,18 +1,18 @@
 cff-version: 1.2.0
 message: >-
-  If you use camtrapEvents, please cite the software record below.
+  If you use this software, please cite this version using the citation below.
+  The version-specific Zenodo DOI is linked from its GitHub release page.
 type: software
 title: >-
   camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data
-version: 0.3.2
-doi: 10.5281/zenodo.22062900
+version: 0.3.3
 authors:
   - family-names: Awini
     given-names: Samuel
     orcid: https://orcid.org/0000-0003-0270-0345
     affiliation: University of Helsinki
 repository-code: https://github.com/samuelawini/camtrapEvents
-url: https://doi.org/10.5281/zenodo.22062900
+url: https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3
 license: MIT
 keywords:
   - camera trapping
@@ -29,6 +29,6 @@ preferred-citation:
       given-names: Samuel
       orcid: https://orcid.org/0000-0003-0270-0345
   year: 2026
-  version: 0.3.2
-  doi: 10.5281/zenodo.22062900
+  version: 0.3.3
   repository-code: https://github.com/samuelawini/camtrapEvents
+  url: https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3
