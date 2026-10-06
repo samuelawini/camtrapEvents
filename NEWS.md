@@ -6,9 +6,18 @@
 * Includes missing species labels in sensitivity totals and inflation tables,
   and evaluates repeated thresholds and rules only once. Inflation joins keep
   missing labels distinct from literal labels.
-* Rejects infinite observed counts and invalid numeric metadata used as
-  fallback group size, preventing negative or non-finite count increments.
-
+* Now raises an error for infinite observed counts and for negative or
+  non-finite numeric metadata used as fallback group size, preventing negative
+  or non-finite count increments. This is a behaviour change: a
+  `rule = "time_only"` call whose numeric `metadata` contain negative values,
+  with `count` absent, previously ran and now stops with an error.
+* Documents that records sharing an identical date-time keep their input row
+  order, so metadata rules can give different results when such ties are
+  reordered; that `station` must uniquely identify a camera location across
+  sites and deployments; and that character date-times are best parsed with
+  the default `tz = "UTC"` when camera clocks did not follow daylight saving.
+* Builds the citation URL from the package version, updates the Oryx
+  reference (60(1), 46-57) and adds Mayfred Appiah as an author.
 * Validates `metadata` column names under every rule, including
   `rule = "time_only"`. A name not present in `data` previously raised an
   opaque `undefined columns selected` error when `count` was absent, and went

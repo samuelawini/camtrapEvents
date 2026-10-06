@@ -31,10 +31,18 @@ photograph and species must be consolidated before filtering.}
 character parsed with \code{format}. Records whose date-time cannot be
 parsed are warned about, and each becomes its own burst and event carrying
 its own \code{count_increment}. Drop or repair them beforehand if that is
-not intended.}
+not intended. Records with identical date-times in the same station and
+species keep their input row order. Because the metadata rules compare
+each record with those before it, reordering such ties can change the
+result; sort tied records deterministically (for example by photograph
+identifier) before filtering.}
 
 \item{station}{Name of the column identifying the camera or station.
-Independence is assessed within station. Missing, blank or whitespace-only
+Independence is assessed within station, so each value must identify one
+camera location uniquely across sites and deployments. Labels are compared
+exactly: a code reused at two sites, or labels differing only in case or
+spacing, are treated as one station or as different stations respectively.
+Build a composite key (for example site and station) where needed. Missing, blank or whitespace-only
 values raise a warning: such records share a group and are filtered against
 each other.}
 
@@ -79,7 +87,9 @@ Corresponds to \pkg{camtrapR}'s \code{deltaTimeComparedTo}
 
 \item{format}{Format string used to parse \code{datetime} when it is character.}
 
-\item{tz}{Time zone used for parsing. Defaults to \code{"UTC"}.}
+\item{tz}{Time zone used for parsing. Defaults to \code{"UTC"}, which treats
+camera clock times as a uniform scale. Use a daylight-saving time zone only
+if the camera clocks were adjusted for daylight saving.}
 
 \item{by_species}{If \code{TRUE}, also return counts per species.}
 

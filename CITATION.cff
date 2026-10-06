@@ -11,6 +11,8 @@ authors:
     given-names: Samuel
     orcid: https://orcid.org/0000-0003-0270-0345
     affiliation: University of Helsinki
+  - family-names: Appiah
+    given-names: Mayfred
 repository-code: https://github.com/samuelawini/camtrapEvents
 url: https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3
 license: MIT
@@ -28,6 +30,8 @@ preferred-citation:
     - family-names: Awini
       given-names: Samuel
       orcid: https://orcid.org/0000-0003-0270-0345
+    - family-names: Appiah
+      given-names: Mayfred
   year: 2026
   version: 0.3.3
   repository-code: https://github.com/samuelawini/camtrapEvents

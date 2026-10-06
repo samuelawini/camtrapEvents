@@ -2,9 +2,10 @@ Package: camtrapEvents
 Title: Metadata-Aware Independence Filtering for Camera-Trap Data
 Version: 0.3.3
 Authors@R:
-    person("Samuel", "Awini", email = "winsamuel@hotmail.com",
-           role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0003-0270-0345"))
+    c(person("Samuel", "Awini", email = "winsamuel@hotmail.com",
+             role = c("aut", "cre"),
+             comment = c(ORCID = "0000-0003-0270-0345")),
+      person("Mayfred", "Appiah", role = "aut"))
 Description: Classifies repeated camera-trap records into detection events.
     In addition to a conventional fixed time threshold, observable metadata
     such as group size, age and sex counts, behaviour or identity labels can

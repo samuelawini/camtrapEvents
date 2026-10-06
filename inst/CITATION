@@ -2,18 +2,24 @@ citHeader("To cite camtrapEvents, cite the software record below. If you also
 discuss the study in which the metadata-aware approach was first applied, cite
 the Oryx article as well.")
 
+release_url <- sprintf(
+  "https://github.com/samuelawini/camtrapEvents/releases/tag/v%s",
+  meta$Version
+)
+
 bibentry(
   bibtype  = "Manual",
   title    = "camtrapEvents: Metadata-Aware Independence Filtering for Camera-Trap Data",
-  author   = person("Samuel", "Awini",
-                    comment = c(ORCID = "0000-0003-0270-0345")),
+  author   = c(person("Samuel", "Awini",
+                      comment = c(ORCID = "0000-0003-0270-0345")),
+               person("Mayfred", "Appiah")),
   year     = 2026,
   note     = sprintf("R package version %s", meta$Version),
-  url      = "https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3",
+  url      = release_url,
   textVersion = paste(
-    "Awini, S. (2026). camtrapEvents: Metadata-Aware Independence Filtering",
-    sprintf("for Camera-Trap Data. R package version %s.", meta$Version),
-    "https://github.com/samuelawini/camtrapEvents/releases/tag/v0.3.3"
+    "Awini, S. & Appiah, M. (2026). camtrapEvents: Metadata-Aware Independence",
+    sprintf("Filtering for Camera-Trap Data. R package version %s.", meta$Version),
+    release_url
   )
 )
 
@@ -27,11 +33,13 @@ bibentry(
                person(c("Nathaniel", "Nii", "Djan"), "Annorbah")),
   journal  = "Oryx",
   year     = 2026,
-  pages    = "1--12",
+  volume   = 60,
+  number   = 1,
+  pages    = "46--57",
   doi      = "10.1017/S0030605325102500",
   textVersion = paste(
     "Awini, S., Cabeza, M., Goded, S., Mahama, A. & Annorbah, N.N.D. (2026).",
     "Tourism alters mammal behaviour and juvenile distribution in a West",
-    "African protected area. Oryx, 1-12. doi:10.1017/S0030605325102500"
+    "African protected area. Oryx, 60(1), 46-57. doi:10.1017/S0030605325102500"
   )
 )
