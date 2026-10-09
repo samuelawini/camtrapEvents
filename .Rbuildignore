@@ -11,3 +11,4 @@
 ^LICENSE\.md$
 ^independence_output$
 ^repo\.Rmd$
+^\.mailmap$

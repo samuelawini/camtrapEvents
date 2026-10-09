@@ -6,10 +6,13 @@
 
 **Metadata-aware independence filtering for camera-trap data**
 
-This source tree identifies version 0.3.3. For reproducible analyses, use the
-exact versioned source archive rather than an unpinned development checkout:
+This source tree identifies version 0.3.3. For reproducible analyses, install
+the tagged release rather than an unpinned development checkout, either from
+GitHub or from the source archive attached to the release:
 
 ```r
+remotes::install_github("samuelawini/camtrapEvents@v0.3.3")
+# or, after downloading camtrapEvents_0.3.3.tar.gz from the release page:
 install.packages("camtrapEvents_0.3.3.tar.gz", repos = NULL, type = "source")
 ```
 
@@ -63,7 +66,16 @@ events <- independent_events(
 ```
 
 Date-times are sorted within station and species, and the original row order is
-restored in the output.
+restored in the output. Records with identical date-times keep their input
+order; because the metadata rules compare each record with earlier ones,
+sort such ties deterministically (for example by photograph identifier) before
+filtering.
+
+`station` must identify one camera location uniquely across sites and
+deployments. Labels are matched exactly, so build a composite key (for example
+`paste(site, station)`) when station codes are reused, and harmonise case and
+spacing first. Keep the default `tz = "UTC"` for camera clock times unless the
+cameras were adjusted for daylight saving.
 
 ## The three rules
 
@@ -211,7 +223,7 @@ or Camera Trap Data Package observation tables.
 > Records were grouped by species and camera station. A new event was retained
 > after more than 30 minutes without a record, or when an age- or sex-class count
 > exceeded the maximum already observed in the current time burst
-> (`camtrapEvents` v0.3.2, `rule = "running_max"`,
+> (`camtrapEvents` v0.3.3, `rule = "running_max"`,
 > `compare_to = "last_record"`). Metadata-triggered events were not allowed
 > within two minutes of the previous retained event
 > (`metadata_refractory = 2`). Event totals under alternative thresholds and
@@ -238,7 +250,7 @@ The metadata-aware approach was first applied in:
 
 > Awini, S., Cabeza, M., Goded, S., Mahama, A. & Annorbah, N.N.D. (2026).
 > Tourism alters mammal behaviour and juvenile distribution in a West African
-> protected area. *Oryx*. doi:10.1017/S0030605325102500
+> protected area. *Oryx*, 60(1), 46-57. doi:10.1017/S0030605325102500
 
 ## Licence
 
